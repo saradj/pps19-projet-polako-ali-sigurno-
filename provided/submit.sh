@@ -1,8 +1,8 @@
 #!/bin/sh
 #
-# release.sh
+# submit.sh
 #
-# Script to help students releasing their assignment:
+# Script to help students submitting their assignment:
 #  check repo is up-to-date + add proper tag and push to remote
 #
 # (c) Jean-Cédric Chappelier 02/19
@@ -68,7 +68,7 @@ proceed() {
     git push --tags || error 4 "cannot push tags to remote"
     git push || error 5 "cannot push to remote"
 
-    echo "Good! Assignement #$1 released with tag \"$tag\""
+    echo "Good! Assignement #$1 submitted with tag \"$tag\""
 }
 
 # ======================================================================

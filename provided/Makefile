@@ -52,12 +52,12 @@ IMAGE=arashpz/feedback
 feedback:
 	@docker run -it --rm -v ${PWD}:/home/tester/done $(IMAGE)
 
-RELEASE_SCRIPT=../provided/release.sh
-release1: $(RELEASE_SCRIPT)
-	@$(RELEASE_SCRIPT) 1
+SUBMIT_SCRIPT=../provided/submit.sh
+submit1: $(SUBMIT_SCRIPT)
+	@$(SUBMIT_SCRIPT) 1
 
-release2: $(RELEASE_SCRIPT)
-	@$(RELEASE_SCRIPT) 2
+submit2: $(SUBMIT_SCRIPT)
+	@$(SUBMIT_SCRIPT) 2
 
-release:
-	@printf 'what "make release"??\nIt'\''s either "make release1" or "make release2"...\n'
+submit:
+	@printf 'what "make submit"??\nIt'\''s either "make submit1" or "make submit2"...\n'
