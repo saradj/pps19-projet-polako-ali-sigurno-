@@ -21,6 +21,7 @@
  * (et supprimer ces sept lignes de commentaire).
  */
  enum command_word_t {READ, WRITE };
+ 
 typedef struct {
 command_word_t order;
 mem_access_t taille;
