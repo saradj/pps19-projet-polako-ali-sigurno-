@@ -24,7 +24,7 @@ virt_addr_t vaddr;
 } command_t;
 
 typedef struct {
-static command_t listing[100] ;
+static command_t [100] listing;
 size_t nb_lines;
 size_t allocated;
 } program_t;

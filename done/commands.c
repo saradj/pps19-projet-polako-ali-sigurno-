@@ -51,7 +51,7 @@ M_EXIT_IF((command->taille == INSTRUCTION) && (command->data_size!= sizeof(word_
 M_EXIT_IF((command-> order == WRITE), ERR_BAD_PARAMETER, "cannot write only read commands");
 //command can have ony one line, when we add command we increase nb of lines? we check if nb lines=100?
 M_REQUIRE((program->nb_lines) < 100, ERR_MEM, "programm already contains 100 commands");
-program->listing [program->nb_lines] = *command;\\
+program->listing [program->nb_lines] = *command;
 ++(program->nb_lines);
 return ERR_NONE;
 
