@@ -13,14 +13,7 @@
 #include <stdio.h> // for size_t, FILE
 #include <stdint.h> // for uint32_t
 
-/* TODO WEEK 05:
- * Définir ici les types
- *      command_word_t
- *      command_t
- *  et program_t
- * (et supprimer ces sept lignes de commentaire).
- */
- enum command_word_t {READ, WRITE };
+enum command_word_t {READ, WRITE };
  
 typedef struct {
 command_word_t order;
@@ -35,6 +28,8 @@ static command_t listing[100] ;
 size_t nb_lines;
 size_t allocated;
 } program_t;
+
+
 /**
  * @brief A useful macro to loop over all program lines.
  * X is the name of the variable to be used for the line;
@@ -53,7 +48,7 @@ size_t allocated;
 /**
  * @brief "Constructor" for program_t: initialize a program.
  * @param program (modified) the program to be initialized.
- * @return ERR_NONE of ok, appropriate error code otherwise.
+ * @return ERR_NONE if ok, appropriate error code otherwise.
  */
 int program_init(program_t* program);
 
@@ -61,14 +56,14 @@ int program_init(program_t* program);
  * @brief add a command (line) to a program. Reallocate memory if necessary.
  * @param program (modified) the program where to add to.
  * @param command the command to be added.
- * @return ERR_NONE of ok, appropriate error code otherwise.
+ * @return ERR_NONE if ok, appropriate error code otherwise.
  */
 int program_add_command(program_t* program, const command_t* command);
 
 /**
  * @brief Tool function to down-reallocate memory to the minimal required size. Typically used once a program will no longer be extended.
  * @param program (modified) the program to be rescaled.
- * @return ERR_NONE of ok, appropriate error code otherwise.
+ * @return ERR_NONE if ok, appropriate error code otherwise.
  */
 int program_shrink(program_t* program);
 
@@ -76,7 +71,7 @@ int program_shrink(program_t* program);
  * @brief Print the content of a program to a stream.
  * @param output the stream to print to.
  * @param program the program to be printed.
- * @return ERR_NONE of ok, appropriate error code otherwise.
+ * @return ERR_NONE if ok, appropriate error code otherwise.
  */
 int program_print(FILE* output, const program_t* program);
 
@@ -84,6 +79,13 @@ int program_print(FILE* output, const program_t* program);
  * @brief Read a program (list of commands) from a file.
  * @param filename the name of the file to read from.
  * @param program the program to be filled from file.
- * @return ERR_NONE of ok, appropriate error code otherwise.
+ * @return ERR_NONE if ok, appropriate error code otherwise.
  */
 int program_read(const char* filename, program_t* program);
+
+/**
+ * @brief "Destructor" for program_t: free its content.
+ * @param program the program to be filled from file.
+ * @return ERR_NONE if ok, appropriate error code otherwise.
+ */
+int program_free(program_t* program);

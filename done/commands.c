@@ -23,17 +23,18 @@ return ERR_NONE; //???
 }
 
 int program_print(FILE* output, const program_t* program){
+	
 	M_REQUIRE_NON_NULL(program);
 	M_REQUIRE_NON_NULL(output);
 	for_all_lines(line, program){
 	 fprintf (output,(line.order==READ) ? "R ": "W ");
 	 fprintf (output,(line.taille==INSTRUCTION) ? "I ": (line.data_size==1) ? "DB ": "DW ");
 	if( line.order==WRITE)
-
-	fprintf (output, line.data_size==1? : "0x%02" PRIX32, line.write_data : "0x%08" PRIX32, line.write_data );
+		fprintf (output, line.data_size==1? : "0x%02" PRIX32, line.write_data : "0x%08" PRIX32, line.write_data );
 	fprintf(output, " @");
 	print_virtual_address(&output, &(line.vaddr));
-	
+	fprintf(output,"\n");
+}
 return ERR_NONE;	
 }
 
@@ -112,7 +113,7 @@ case 1: switch(fgetc(fp){
 case 2: // checking if size of writedata is correct is done in add comand
 //strcpy(string, string+i+1);
 	if(command->data_size==1)
-	const size_t size_of_wrdata= command->data_size==1? 4:10;
+	const size_t size_of_wrdata = command->data_size==1 ? 4:10;
 	char [size_of_wrdata] str;
 	for(int i=0;i <size_of_wrdata; ++i)
 	str[i]=fgetc(fp);
@@ -127,8 +128,24 @@ case 3:// virt addr
 	init_virt_addr64(&(command->vaddr),(int) strtol(vrt, NULL, 0));	
 }
 M_EXIT_IF_TRAILING(fp);
-	
 return ERR_NONE;
+
+}
+}
+
+uint32_t
+int require_valid(program_t* program){
+	for_all_lines(line, program){
+	M_REQUIRE( ((line.data_size ==( (line.taille == DATA) ? ( 1 || sizeof(word_t)) : sizeof(word_t))), ERR_SIZE, "data can not have length different than 1 byte or word");
+M_REQUIRE((line.taille == INSTRUCTION) && (line.data_size== sizeof(word_t)), ERR_SIZE, "Instructions must have length of a word");//should we use err size or err bad parameter??
+M_EXIT_IF((line.order == WRITE), ERR_BAD_PARAMETER, "cannot write only read commands");
+if(line.taille==DATA)
+if(line.data_size==1)
+M_REQUIRE( (write_data & (pow(2,9)-1)== write_data), ERR_SIZE, "wrdata should be ony 1 byte if data size =1");
+else
+M_REQUIRE( (write_data & (pow(2,25)-1)== write_data), ERR_SIZE, "wrdata should be ony 4 bytes if data size =1");
+else if(line.taille==INSTRUCTION)
+M_REQUIRE((write_data & (pow(2,25)-1)== write_data), ERR_SIZE, "wrdata should be ony 4 bytes if data size =1");
 
 }
 }
