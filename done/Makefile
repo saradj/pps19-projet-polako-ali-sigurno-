@@ -10,7 +10,7 @@ CFLAGS = -std=c11 -Wall -Wpedantic -g
 # -Wconversion -Wunreachable-code
 
 # uncomment if you want to add DEBUG flag
-# CPPFLAGS += -DDEBUG
+CPPFLAGS += -DDEBUG
 
 # ----------------------------------------------------------------------
 # feel free to update/modifiy this part as you wish
@@ -18,8 +18,21 @@ CFLAGS = -std=c11 -Wall -Wpedantic -g
 # all those libs are required on Debian, feel free to adapt it to your box
 LDLIBS += -lcheck -lm -lrt -pthread -lsubunit
 
-all:: test-addr
+all:: test-memory
 
+addr_mng.o: addr_mng.c addr_mng.h addr.h error.h
+commands.o: commands.c commands.h mem_access.h addr.h error.h addr_mng.h
+error.o: error.c
+memory.o: memory.c memory.h addr.h page_walk.h addr_mng.h util.h error.h
+page_walk.o: page_walk.c page_walk.h addr.h addr_mng.h error.h
+test-addr.o: test-addr.c tests.h error.h util.h addr.h addr_mng.h
+test-commands.o: test-commands.c error.h commands.h mem_access.h addr.h
+test-memory.o: test-memory.c error.h memory.h addr.h page_walk.h util.h \
+ addr_mng.h
+test-tlb_simple.o: test-tlb_simple.c error.h util.h addr_mng.h addr.h \
+ commands.h mem_access.h memory.h list.h tlb.h tlb_mng.h
+
+test-memory: test-memory.o memory.o page_walk.o addr_mng.o
 
 
 # ----------------------------------------------------------------------
@@ -48,8 +61,9 @@ check:: all
 	  for file in tests/*.*.sh; do [ -x $$file ] || echo "Launching $$file"; ./$$file || exit 1; done; \
 	fi
 
-IMAGE=arashpz/feedback
+IMAGE=arashpz/feedback:latest
 feedback:
+	@docker pull $(IMAGE)
 	@docker run -it --rm -v ${PWD}:/home/tester/done $(IMAGE)
 
 SUBMIT_SCRIPT=../provided/submit.sh

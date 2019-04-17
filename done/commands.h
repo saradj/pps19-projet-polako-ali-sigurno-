@@ -13,9 +13,11 @@
 #include <stdio.h> // for size_t, FILE
 #include <stdint.h> // for uint32_t
 
-enum command_word_t {READ, WRITE };
+enum command_word_type {READ, WRITE };
+typedef enum command_word_type command_word_t;
  
 typedef struct {
+	
 command_word_t order;
 mem_access_t taille;
 size_t data_size;
@@ -24,7 +26,7 @@ virt_addr_t vaddr;
 } command_t;
 
 typedef struct {
-static command_t [100] listing;
+ command_t * listing;
 size_t nb_lines;
 size_t allocated;
 } program_t;
