@@ -6,7 +6,7 @@
  * @date 2018-19
  */
 
-#if defined _WIN32  || defined _WIN64
+#if defined _WIN32 || defined _WIN64
 #define __USE_MINGW_ANSI_STDIO 1
 #endif
 
@@ -18,9 +18,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <string.h> // for memset()
+#include <string.h>   // for memset()
 #include <inttypes.h> // for SCNx macros
 #include <assert.h>
+
+#define BYTE_SIZE 1
+#define FOURKI 4096
+#define MAXSIZE_STRING 100
 
 // ======================================================================
 /**
@@ -52,6 +56,8 @@ static void address_print(addr_fmt_t show_addr, const void* reference,
     (void)printf(":%s", sep);
 }
 
+
+
 // ======================================================================
 /**
  * @brief Tool function to print the content of a memory area
@@ -81,11 +87,81 @@ static void mem_dump_with_options(const void* reference, const void* from, const
     }
     if (nb_to_print != line_size) putchar('\n');
 }
-
 // ======================================================================
+
+int mem_init_from_dumpfile(const char* filename, void** memory, size_t* mem_capacity_in_bytes){ //initialising memory from dumpfile
+    
+    FILE *file;
+    file = fopen(filename, "rb"); // read binary mode
+    
+    M_REQUIRE(file!=NULL, ERR_IO, "file not open correctly");
+    
+    // va tout au bout du fichier
+    fseek(file, 0L, SEEK_END);
+    // ind ique la position, et donc la taille (en octets)
+    *mem_capacity_in_bytes = (size_t) ftell(file);
+    // revient au début du fichier (pour le lire par la suite)
+    rewind(file);
+    *memory = malloc(*mem_capacity_in_bytes);
+    //fprintf(stderr, "after %zu \n", *mem_capacity_in_bytes);
+    memset(*memory, 0, *mem_capacity_in_bytes );
+    // how to write in memory byte by byte??
+    
+    M_REQUIRE(fread(*memory, *mem_capacity_in_bytes, BYTE_SIZE, file)== BYTE_SIZE, ERR_MEM, "Error whie reading file");
+    fclose(file);
+    
+return ERR_NONE;
+}
+
+// ==========================================================================
+
+static int page_file_read(char* filename, void* phyaddr){ //helper method to read at physical address from file
+    FILE *file;
+    file = fopen(filename, "rb"); // read binary mode
+    M_REQUIRE(file!=NULL, ERR_IO, "File did not open correctly");
+    M_REQUIRE(fread(phyaddr, FOURKI, BYTE_SIZE, file)== BYTE_SIZE, ERR_MEM, "Error whie reading file");
+    fclose(file);
+    return ERR_NONE;
+    }
+    
+int mem_init_from_description(const char* master_filename, void** memory, size_t* mem_capacity_in_bytes){
+
+    FILE *file;
+    file = fopen(master_filename, "rb"); // read binary mode
+    M_REQUIRE(file!=NULL, ERR_IO, "file not open correctly");
+    fscanf(file,"%zu",mem_capacity_in_bytes);//getting the total bytes to store 
+    *memory = malloc(*mem_capacity_in_bytes);
+    char pgd_filename [MAXSIZE_STRING];
+    fscanf(file, "%s", pgd_filename );//getting the filename string
+    page_file_read(pgd_filename, *memory);
+    int num = 0;
+    fscanf(file, "%d", &num); //getting the number of ilnes to read next
+    uint32_t phaddr = 0;
+    for(int i=0; i<num; i++){
+    fscanf(file,"%x" SCNx32 ,&phaddr); //getting the physical address
+    fscanf(file, "%s", pgd_filename ); // getting the filename where to take the bytes from
+    page_file_read(pgd_filename, ((uint8_t*)(*memory) + phaddr)); 
+    }
+
+    uint64_t vadd = 0;
+    phy_addr_t paddr;
+    init_phy_addr(&paddr, 0,0); //initializing the physical address
+    virt_addr_t virtaddr;
+     init_virt_addr64(&virtaddr,0);//initializing the virtual address
+    while (fscanf(file,"%lx" SCNx64 ,&vadd)!=EOF){ //getting the virtual address and string untill the end
+        init_virt_addr64(&virtaddr, vadd);
+        page_walk(*memory, &virtaddr, &paddr); //getting the physical address from virtual address 
+        fscanf(file, "%s", pgd_filename ); // getting the filename where to take the bytes from
+        uint32_t numM = (paddr.phy_page_num) << PAGE_OFFSET | paddr.page_offset; //getting the physical address from the struct
+        page_file_read(pgd_filename, ((uint8_t*)(*memory) + numM));
+    }
+    fclose(file);
+    return ERR_NONE;
+    }
 // See memory.h for description
-int vmem_page_dump_with_options(const void *mem_space, const virt_addr_t* from,
-                                addr_fmt_t show_addr, size_t line_size, const char* sep)
+
+int vmem_page_dump_with_options(const void *mem_space, const virt_addr_t *from,
+                                addr_fmt_t show_addr, size_t line_size, const char *sep)
 {
 #ifdef DEBUG
     debug_print("mem_space=%p\n", mem_space);
@@ -104,95 +180,21 @@ int vmem_page_dump_with_options(const void *mem_space, const virt_addr_t* from,
     (void)fputc('\n', stderr);
 #endif
 
-    const uint32_t paddr_offset = ((uint32_t) paddr.phy_page_num << PAGE_OFFSET);
-    const char * const page_start = (const char *)mem_space + paddr_offset;
-    const char * const start = page_start + paddr.page_offset;
-    const char * const end_line = start + (line_size - paddr.page_offset % line_size);
-    const char * const end   = page_start + PAGE_SIZE;
-    debug_print("start=%p (offset=%zX)\n", (const void*) start, start - (const char *)mem_space);
-    debug_print("end  =%p (offset=%zX)\n", (const void*) end, end   - (const char *)mem_space) ;
+    const uint32_t paddr_offset = ((uint32_t)paddr.phy_page_num << PAGE_OFFSET);
+    const char *const page_start = (const char *)mem_space + paddr_offset;
+    const char *const start = page_start + paddr.page_offset;
+    const char *const end_line = start + (line_size - paddr.page_offset % line_size);
+    const char *const end = page_start + PAGE_SIZE;
+    debug_print("start=%p (offset=%zX)\n", (const void *)start, start - (const char *)mem_space);
+    debug_print("end  =%p (offset=%zX)\n", (const void *)end, end - (const char *)mem_space);
     mem_dump_with_options(mem_space, page_start, start, show_addr, line_size, sep);
     const size_t indent = paddr.page_offset % line_size;
-    if (indent == 0) putchar('\n');
+    if (indent == 0)
+        putchar('\n');
     address_print(show_addr, mem_space, start, sep);
-    for (size_t i = 1; i <= indent; ++i) printf("  %s", sep);
+    for (size_t i = 1; i <= indent; ++i)
+        printf("  %s", sep);
     mem_dump_with_options(mem_space, start, end_line, NONE, line_size, sep);
     mem_dump_with_options(mem_space, end_line, end, show_addr, line_size, sep);
     return ERR_NONE;
-}
-
- int page_file_read(char* filename, void* phyaddr){
-	FILE *file;
-	file = fopen(filename, "rb"); // read mode
-	
-	M_REQUIRE(file!=NULL, ERR_IO, "file not open correctly");
-	M_REQUIRE(fread(phyaddr, 4096, 1, file)== 1, ERR_MEM, "Error whie reading file");
-	fclose(file);
-	return ERR_NONE;
-	}
-	
-int mem_init_from_description(const char* master_filename, void** memory, size_t* mem_capacity_in_bytes){
-
-FILE *file;
-	file = fopen(master_filename, "rb"); // read mode
-	
-	M_REQUIRE(file!=NULL, ERR_IO, "file not open correctly");
-
-	fscanf(file,"%zu",mem_capacity_in_bytes);
-	*memory = malloc(*mem_capacity_in_bytes);//??? 
-	
-	char pgd_filename [100];
-	fscanf(file, "%s", pgd_filename );
-	page_file_read(pgd_filename, memory);
-	int num=0;
-	fscanf(file, "%d", &num);
-	uint32_t phaddr=0;
-	for(int i=0; i<num; i++){
-	fscanf(file,"%x" SCNx32 ,&phaddr);
-	fscanf(file, "%s", pgd_filename );
-	page_file_read(pgd_filename, ((uint8_t*)(*memory) + phaddr));// can we do this???
-}
-
-fprintf(stderr, "after mem  ");
-
-uint64_t vadd=0;
-phy_addr_t paddr={0,0};
-virt_addr_t virtaddr={0,0,0,0,0,0};
-while (fscanf(file,"%lx" SCNx64 ,&vadd)!=EOF){
-	fprintf(stderr, " virt addr = %lu\n", vadd);
-init_virt_addr64(&virtaddr, vadd);
-page_walk(*memory, &virtaddr, &paddr);
-
-fscanf(file, "%s", pgd_filename );
-fprintf(stderr, " file = %s\n", pgd_filename);
-uint32_t numM = (paddr.phy_page_num) << PAGE_OFFSET | paddr.page_offset; 
-page_file_read(pgd_filename, ((uint8_t*)(*memory) + numM));
-}
-fprintf(stderr, "after mem  ");
-fclose(file);
-return ERR_NONE;
-}
-
-int mem_init_from_dumpfile(const char* filename, void** memory, size_t* mem_capacity_in_bytes){
-	
-	FILE *file;
-	file = fopen(filename, "rb"); // read mode
-	
-	M_REQUIRE(file!=NULL, ERR_IO, "file not open correctly");
-	
-	// va tout au bout du fichier
-	fseek(file, 0L, SEEK_END);
-	// indique la position, et donc la taille (en octets)
-	*mem_capacity_in_bytes = (size_t) ftell(file);
-	// revient au début du fichier (pour le lire par la suite)
-	rewind(file);
-	*memory = malloc(*mem_capacity_in_bytes);
-	//fprintf(stderr, "after %zu \n", *mem_capacity_in_bytes);
-	memset(*memory, 0, *mem_capacity_in_bytes );
-	// how to write in memory byte by byte??
-	int k;
-	M_REQUIRE((k = fread(*memory, *mem_capacity_in_bytes, 1, file))== 1, ERR_MEM, "Error whie reading file");
-	fclose(file);
-	//fprintf(stderr, "after %d \n", k);
-return ERR_NONE;
 }
