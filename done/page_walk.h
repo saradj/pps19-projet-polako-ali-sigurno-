@@ -18,5 +18,4 @@
  * @param paddr (SET) physical address
  * @return error code
  */
- 
 int page_walk(const void* mem_space, const virt_addr_t* vaddr, phy_addr_t* paddr);
