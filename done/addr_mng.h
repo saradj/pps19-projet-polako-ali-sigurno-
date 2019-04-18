@@ -20,7 +20,7 @@
  * @param pud_entry the value of the PUD offset of the virtual address
  * @param pmd_entry the value of the PMD offset of the virtual address
  * @param pte_entry the value of the PT  offset of the virtual address
- * @param page_offest the value of the physical memory page offset of the virtual address
+ * @param page_offset the value of the physical memory page offset of the virtual address
  * @return error code
  */
 int init_virt_addr(virt_addr_t * vaddr,
@@ -80,3 +80,4 @@ int print_virtual_address(FILE* where, const virt_addr_t* vaddr);
  * @return number of printed characters
  */
 int print_physical_address(FILE* where, const phy_addr_t* paddr);
+

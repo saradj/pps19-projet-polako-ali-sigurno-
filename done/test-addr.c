@@ -52,7 +52,6 @@ START_TEST(addr_basic_test_1)
 // ------------------------------------------------------------
     virt_addr_t vaddr;
     zero_init_var(vaddr);
-
     srand(time(NULL) ^ getpid() ^ pthread_self());
 #pragma GCC diagnostic pop
 

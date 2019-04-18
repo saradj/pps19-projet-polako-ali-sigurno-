@@ -8,5 +8,9 @@
  * @date 2018-19
  */
 
-enum mem_access_type { INSTRUCTION, DATA };
+enum mem_access_type
+{
+    INSTRUCTION,
+    DATA
+};
 typedef enum mem_access_type mem_access_t;

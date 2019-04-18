@@ -15,25 +15,27 @@
 #include <errno.h>  // errno
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-// ======================================================================
-/**
+    // ======================================================================
+    /**
  * @brief internal error codes.
  *
  */
-typedef enum {
-    ERR_NONE = 0, // no error
-    ERR_MEM,
-    ERR_IO,
-    ERR_BAD_PARAMETER,
-    ERR_EOF,
-    ERR_ADDR, // error in an address
-    ERR_SIZE, // wrong size
-    ERR_POLICY, // wrong cache/TLB policy
-    ERR_LAST // not an actual error but to have e.g. the total number of errors
-} error_code;
+    typedef enum
+    {
+        ERR_NONE = 0, // no error
+        ERR_MEM,
+        ERR_IO,
+        ERR_BAD_PARAMETER,
+        ERR_EOF,
+        ERR_ADDR,   // error in an address
+        ERR_SIZE,   // wrong size
+        ERR_POLICY, // wrong cache/TLB policy
+        ERR_LAST    // not an actual error but to have e.g. the total number of errors
+    } error_code;
 
 // ======================================================================
 /*
@@ -45,25 +47,28 @@ typedef enum {
  * @brief debug_print macro is usefull to print message in DEBUG mode only.
  */
 #ifdef DEBUG
-#define debug_print(fmt, ...) \
+#define debug_print(fmt, ...)                       \
     fprintf(stderr, __FILE__ ":%d:%s(): " fmt "\n", \
-       __LINE__, __func__, __VA_ARGS__)
+            __LINE__, __func__, __VA_ARGS__)
 #else
 #define debug_print(fmt, ...) \
-    do {} while(0)
+    do                        \
+    {                         \
+    } while (0)
 #endif
 
 // ----------------------------------------------------------------------
 /**
- * @brief M_EXIT macro is usefull to return an error code from a function with a debug message.
+ * @brief M_EXIT macro is useful to return an error code from a function with a debug message.
  *        Example usage:
  *           M_EXIT(ERR_BAD_PARAMETER, "unable to do something decent with value %lu", i);
  */
-#define M_EXIT(error_code, fmt, ...)  \
-    do { \
+#define M_EXIT(error_code, fmt, ...)   \
+    do                                 \
+    {                                  \
         debug_print(fmt, __VA_ARGS__); \
-        return error_code; \
-    } while(0)
+        return error_code;             \
+    } while (0)
 
 // ----------------------------------------------------------------------
 /**
@@ -72,7 +77,7 @@ typedef enum {
  *        Example usage:
  *            M_EXIT_ERR_NOMSG(ERR_BAD_PARAMETER);
  */
-#define M_EXIT_ERR_NOMSG(error_code)   \
+#define M_EXIT_ERR_NOMSG(error_code) \
     M_EXIT(error_code, "error: %s", ERR_MESSAGES[error_code - ERR_NONE])
 
 // ----------------------------------------------------------------------
@@ -84,7 +89,7 @@ typedef enum {
  *        Example usage:
  *            M_EXIT_ERR(ERR_BAD_PARAMETER, "unable to generate from %lu", i);
  */
-#define M_EXIT_ERR(error_code, fmt, ...)   \
+#define M_EXIT_ERR(error_code, fmt, ...) \
     M_EXIT(error_code, "error: %s: " fmt, ERR_MESSAGES[error_code - ERR_NONE], __VA_ARGS__)
 
 // ----------------------------------------------------------------------
@@ -93,12 +98,14 @@ typedef enum {
  *        Example usage:
  *            M_EXIT_IF(i > 3, ERR_BAD_PARAMETER, "third argument value (%lu) is too high (> 3)", i);
  */
-#define M_EXIT_IF(test, error_code, fmt, ...)   \
-    do { \
-        if (test) { \
+#define M_EXIT_IF(test, error_code, fmt, ...)         \
+    do                                                \
+    {                                                 \
+        if (test)                                     \
+        {                                             \
             M_EXIT_ERR(error_code, fmt, __VA_ARGS__); \
-        } \
-    } while(0)
+        }                                             \
+    } while (0)
 
 // ----------------------------------------------------------------------
 /**
@@ -107,11 +114,12 @@ typedef enum {
  *        Example usage:
  *            M_EXIT_IF_ERR(foo(a, b), "calling foo()");
  */
-#define M_EXIT_IF_ERR(ret, name)   \
-   do { \
-        error_code retVal = ret; \
-        M_EXIT_IF(retVal != ERR_NONE, retVal, "%s", name);   \
-    } while(0)
+#define M_EXIT_IF_ERR(ret, name)                           \
+    do                                                     \
+    {                                                      \
+        error_code retVal = ret;                           \
+        M_EXIT_IF(retVal != ERR_NONE, retVal, "%s", name); \
+    } while (0)
 
 // ----------------------------------------------------------------------
 /**
@@ -120,25 +128,25 @@ typedef enum {
  *        Example usage:
  *            M_EXIT_IF_NULL(p = malloc(size), size);
  */
-#define M_EXIT_IF_NULL(var, size)   \
+#define M_EXIT_IF_NULL(var, size) \
     M_EXIT_IF((var) == NULL, ERR_MEM, ", cannot allocate %zu bytes for %s", size, #var)
 
 // ----------------------------------------------------------------------
 /**
- * @brief M_EXIT_IF_TOO_LONG macro is usefull to warn (and stop) when a string is more than size characters long.
+ * @brief M_EXIT_IF_TOO_LONG macro is useful to warn (and stop) when a string is more than size characters long.
  *        Example usage:
  *            M_EXIT_IF_TOO_LONG(answer, INPUT_MAX_SIZE);
  */
-#define M_EXIT_IF_TOO_LONG(var, size)   \
+#define M_EXIT_IF_TOO_LONG(var, size) \
     M_EXIT_IF(strlen(var) > size, ERR_BAD_PARAMETER, ", given %s is larger than %d bytes", #var, size)
 
 // ----------------------------------------------------------------------
 /**
- * @brief M_EXIT_IF_TRAILING macro is usefull to test whether some trailing character(s) remain(s) in file.
+ * @brief M_EXIT_IF_TRAILING macro is useful to test whether some trailing character(s) remain(s) in file.
  *        Example usage:
  *            M_EXIT_IF_TRAILING(file);
  */
-#define M_EXIT_IF_TRAILING(file)   \
+#define M_EXIT_IF_TRAILING(file) \
     M_EXIT_IF(getc(file) != '\n', ERR_BAD_PARAMETER, ", trailing chars on \"%s\"", #file)
 
 // ----------------------------------------------------------------------
@@ -148,13 +156,15 @@ typedef enum {
  *        Example usage:
  *           M_EXIT_IF_TRAILING_WITH_CODE(stdin, { free(something); } );
  */
-#define M_EXIT_IF_TRAILING_WITH_CODE(file, code)   \
-    do { \
-        if (getc(file) != '\n') { \
-            code; \
+#define M_EXIT_IF_TRAILING_WITH_CODE(file, code)                                \
+    do                                                                          \
+    {                                                                           \
+        if (getc(file) != '\n')                                                 \
+        {                                                                       \
+            code;                                                               \
             M_EXIT_ERR(ERR_BAD_PARAMETER, ", trailing chars on \"%s\"", #file); \
-        } \
-    } while(0)
+        }                                                                       \
+    } while (0)
 
 // ----------------------------------------------------------------------
 /**
@@ -164,12 +174,14 @@ typedef enum {
  *        Example usage:
  *            M_REQUIRE(i <= 3, ERR_BAD_PARAMETER, "input value (%lu) is too high (> 3)", i);
  */
-#define M_REQUIRE(test, error_code, fmt, ...)   \
-    do { \
-        if (!(test)) { \
-             M_EXIT(error_code, fmt, __VA_ARGS__); \
-        } \
-    } while(0)
+#define M_REQUIRE(test, error_code, fmt, ...)     \
+    do                                            \
+    {                                             \
+        if (!(test))                              \
+        {                                         \
+            M_EXIT(error_code, fmt, __VA_ARGS__); \
+        }                                         \
+    } while (0)
 
 // ----------------------------------------------------------------------
 /**
@@ -200,13 +212,12 @@ typedef enum {
 #define M_REQUIRE_NON_NULL(arg) \
     M_REQUIRE_NON_NULL_CUSTOM_ERR(arg, ERR_BAD_PARAMETER)
 
-// ======================================================================
-/**
+    // ======================================================================
+    /**
 * @brief internal error messages. defined in error.c
 *
 */
-extern
-const char * const ERR_MESSAGES[];
+    extern const char *const ERR_MESSAGES[];
 
 #ifdef __cplusplus
 }
