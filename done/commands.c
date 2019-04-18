@@ -20,26 +20,26 @@
 
 int fill_command(FILE* fp, command_t* command);
 
-int program_init(program_t* program){
+int program_init(program_t* program){ //initialising the program
 	
 	M_REQUIRE_NON_NULL(program);
 	M_REQUIRE_NON_NULL(program->listing);
-	program->listing=(command_t*)calloc(INIT_NBLINES, sizeof(command_t));
+	program->listing=(command_t*)calloc(INIT_NBLINES, sizeof(command_t));//using callc to allocate and initialise to 0 an array of 10 commands
 	M_REQUIRE_NON_NULL(program->listing);
-	program->nb_lines = 0;
-	program->allocated = INIT_NBLINES*sizeof(command_t);
+	program->nb_lines = 0; 
+	program->allocated = INIT_NBLINES * sizeof(command_t); 
 	return ERR_NONE; 
 } 
 
-int program_print(FILE* output, const program_t* program){
+int program_print(FILE* output, const program_t* program){ // printing the program 
 	
 	M_REQUIRE_NON_NULL(program);
 	M_REQUIRE_NON_NULL(program->listing);
 	M_REQUIRE_NON_NULL(output);
-	for_all_lines(line, program){
-	 fprintf (output,(line->order==READ) ? "R ": "W ");
-	 fprintf (output,(line->type==INSTRUCTION) ? "I ": (line->data_size==1) ? "DB ": "DW ");
-	if( line->order==WRITE){
+	for_all_lines(line, program){ // looping trough the lines
+	 fprintf (output,(line->order == READ) ? "R ": "W "); //check for a read 
+	 fprintf (output,(line->type == INSTRUCTION) ? "I ": (line->data_size==1) ? "DB ": "DW ");
+	if(line->order == WRITE){
 		if(line->data_size == 1)
 			fprintf (output, "0x%02" PRIX32, line->write_data );
 		else
@@ -77,7 +77,6 @@ int program_add_command(program_t* program, const command_t* command){
 		program->listing= (command_t*) realloc(program->listing, program->allocated);
 		memset(program->listing + (old_allocated/sizeof(command_t)), 0, old_allocated);
 		}
-		
 	M_REQUIRE((program->nb_lines) < 100, ERR_MEM, "programm already contains 100 commands");
 	program->listing [program->nb_lines] = *command;
 	++(program->nb_lines);
@@ -90,23 +89,18 @@ int program_read(const char* filename, program_t* program){
 	FILE *fp;
 	fp = fopen(filename, "r"); // read mode
 	M_REQUIRE_NON_NULL(fp);
-		
-	   command_t command;// should we initiaise it??
+	   command_t command;
 	   int k;
 		while((k = fill_command(fp,&command))!=EOF){
-		if((k!=ERR_NONE)){
 			
-			fprintf(stderr,"err in fill \n");
-			return k;}
-		else{ 
-			k=program_add_command(program,&command);
-			if(k!=ERR_NONE){
-	fprintf(stderr,"err in prog \n");
-	  return k;
-	  //use shrink!!
-  }
-  }
+		if((k!=ERR_NONE))
+			return k;
+			
+		if((k = program_add_command(program,&command))!=ERR_NONE)
+			return k;
+  
  }
+	program_shrink(program);
 	fclose(fp);
 	return ERR_NONE; 
 }
@@ -116,25 +110,20 @@ int program_read(const char* filename, program_t* program){
 int fill_command(FILE* fp, command_t* command){
 
 char c;
-
 while (isspace(c=fgetc(fp))){};
-if(c==EOF)
-	return EOF;
-	
-fprintf(stderr, "charr == %c", c);
-
-if(c=='R')
+	if(c==EOF)
+		return EOF;
+	if(c=='R')
 		command->order= READ;
-		else if(c=='W'){
-		
+	else if(c=='W'){
 		command->order = WRITE;}
 		else{
 		M_EXIT(ERR_BAD_PARAMETER, "The command must start with R or W");}
 		
 		M_REQUIRE(isspace(fgetc(fp)), ERR_BAD_PARAMETER, "W or R must be followed by space");
 		
-
- switch(fgetc(fp)){
+while (isspace(c=fgetc(fp))){};
+ switch(c){
 	case 'I': {
 				command->type=INSTRUCTION;
 				command->data_size=sizeof(word_t);
@@ -152,21 +141,23 @@ if(c=='R')
 			command->write_data = writeData;
 		}
 		M_REQUIRE(isspace(fgetc(fp)), ERR_BAD_PARAMETER, "WRITEDATA must be followed by space");
-	}	
+		break;
+	}
+	default: {
+				M_EXIT_ERR(ERR_BAD_PARAMETER, "Must specifz a type instruction I or data D");
+	}
   }
 	while (isspace(c=fgetc(fp))){};
 	M_REQUIRE(c=='@', ERR_ADDR, "virtadd  must start with @");
 	uint64_t vaddr=0;
 	fscanf(fp,"%lx" SCNx64 ,&vaddr);
-	init_virt_addr64(&(command->vaddr),vaddr);	
-	fprintf(stderr, " virt = %lx \n", vaddr);
 	
-return ERR_NONE;
+return init_virt_addr64(&(command->vaddr),vaddr);	
 }
 
 
 
-int program_free(program_t* program){
+int program_free(program_t* program){ 
 	
 	M_REQUIRE_NON_NULL(program);
 	M_REQUIRE_NON_NULL(program->listing);
