@@ -2,7 +2,7 @@
 ## partial Makefile provided to students
 ##
 
-CFLAGS = -std=c11 -Wall -Wpedantic -g -lcheck -lm -lrt -pthread -lsubunit
+CFLAGS = -std=c11 -Wall -Wpedantic -g
 
 # a bit more checks if you'd like to (uncomment
 # CFLAGS += -Wextra -Wfloat-equal -Wshadow                         \
@@ -10,7 +10,7 @@ CFLAGS = -std=c11 -Wall -Wpedantic -g -lcheck -lm -lrt -pthread -lsubunit
 # -Wconversion -Wunreachable-code
 
 # uncomment if you want to add DEBUG flag
-#CPPFLAGS += -DDEBUG
+# CPPFLAGS += -DDEBUG
 
 # ----------------------------------------------------------------------
 # feel free to update/modifiy this part as you wish
@@ -20,26 +20,23 @@ LDLIBS += -lcheck -lm -lrt -pthread -lsubunit
 
 all:: test-memory
 
-addr.o: addr.h
-addr_mng.o: addr_mng.h addr.h error.h addr_mng.c
-cache.o: cache.h
-cache_mng.o: cache_mng.h mem_access.h addr.h cache.h
+addr_mng.o: addr_mng.c error.h addr.h addr_mng.h
 commands.o: commands.c commands.h mem_access.h addr.h addr_mng.h error.h
-error.o: error.h error.c 
-mem_access.o: mem_access.h
-memory.o: memory.h addr.h page_walk.h addr_mng.h util.h error.h memory.c
-page_walk.o: page_walk.c page_walk.h addr.h addr_mng.h
+error.o: error.c error.h
+memory.o: memory.c memory.h addr.h page_walk.h addr_mng.h util.h error.h
+page_walk.o: page_walk.c addr.h addr_mng.h error.h
 test-addr.o: test-addr.c tests.h error.h util.h addr.h addr_mng.h
 test-commands.o: test-commands.c error.h commands.h mem_access.h addr.h
 test-memory.o: test-memory.c error.h memory.h addr.h page_walk.h util.h addr_mng.h
-tests.o: tests.h error.h
-
-##test-addr:: addr_mng.o test-addr.o 
-##commands:: addr_mng.o commands.o 
-test-commands:: error.o commands.o addr_mng.o test-commands.o
-test-memory: error.o memory.o addr.o addr_mng.o page_walk.o test-memory.o
 
 
+test-addr: test-addr.o error.o addr_mng.o
+test-commands: test-commands.o error.o addr_mng.o commands.o 
+test-memory: test-memory.o error.o memory.o page_walk.o addr_mng.o 
+
+#test-tlb_hrchy.o and test-tlb_simple.o are not implemented yet for Week 7
+#test-tlb_hrchy.o: test-tlb_hrchy.c error.h util.h addr_mng.h addr.h commands.h mem_access.h memory.h tlb_hrchy.h tlb_hrchy_mng.h
+#test-tlb_simple.o: test-tlb_simple.c error.h util.h addr_mng.h addr.h commands.h mem_access.h memory.h list.h tlb.h tlb_mng.h
 
 # ----------------------------------------------------------------------
 # This part is to make your life easier. See handouts how to make use of it.
@@ -67,8 +64,9 @@ check:: all
 	  for file in tests/*.*.sh; do [ -x $$file ] || echo "Launching $$file"; ./$$file || exit 1; done; \
 	fi
 
-IMAGE=arashpz/feedback
+IMAGE=arashpz/feedback:latest
 feedback:
+	@docker pull $(IMAGE)
 	@docker run -it --rm -v ${PWD}:/home/tester/done $(IMAGE)
 
 SUBMIT_SCRIPT=../provided/submit.sh
