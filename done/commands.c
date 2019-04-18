@@ -1,206 +1,170 @@
+/**
+ * @file commands.c
+ * @brief 
+ *
+ * @author Sara Djambazovska and Marouane Jaakik
+ * @date March 2019
+ */
+#include "commands.h" // 
+#include <stdio.h> // for size_t, FILE
+#include <stdint.h> // for uint32_t
+#include <string.h>
+#include <ctype.h>
 #include <inttypes.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
-#include "commands.h"
-#include "addr_mng.h"
 #include "error.h"
+#include "addr_mng.h"
+#include "addr.h"
 
-//BEST PIECE OF CODE I'VE EVER WRITTEN SO FAR
-//TODO: Won't compile, "Static declaration follows non static declaration"
-static const size_t MAX_CHAR_NUMBER = 2;
-static size_t handle_line_calls = 0;
+#define INIT_NBLINES    10
 
-static void printline(const command_t *command, FILE *stream)
-{
-	if (command->order == READ)
-		fprintf(stream, "R ");
-	else
-		fprintf(stream, "W ");
-	if (command->type == INSTRUCTION)
-		fprintf(stream, "I ");
+int fill_command(FILE* fp, command_t* command);
 
-	else if (command->data_size == 4)
-		fprintf(stream, "DW ");
-	else
-		fprintf(stream, "DB ");
-	if (command->data_size == 1 && command->order == WRITE)
-		fprintf(stream, "0x%02" PRIX32 " ", command->write_data);
-	else if (command->order == WRITE)
-		fprintf(stream, "0x%08" PRIX32 " ", command->write_data);
-	fprintf(stream, "@0x%016" PRIX64 "\n", virt_addr_t_to_uint64_t(&(command->vaddr)));
-}
-
-static void handle_line_instruction(command_t *line)
-{
-	//In case of instruction read fields data size and write data are chosen to be 0
-	line->data_size = 4;
-	line->write_data = 0;
-	line->type = INSTRUCTION;
-}
-
-static void handle_line_data_read(FILE *input, command_t *line, char size)
-{
-
-	size == 'W' ? (line->data_size = 4) : (line->data_size = 1);
-	line->write_data = 0;
-	line->type = DATA;
-}
-
-static void handle_line_data_write(FILE *input, command_t *line, char size)
-{
-	size == 'B' ? fscanf(input, " %" SCNx8, &(line->write_data)) : fscanf(input, " %" SCNx32, &(line->write_data));
-	size == 'B' ? (line->data_size = 1) : (line->data_size = 4);
-	line->type = DATA;
-}
-
-static command_t handle_line(FILE *input)
-{
-	debug_print("", NULL);
-	command_t line;
-	char accessType;
-	char word_byte[MAX_CHAR_NUMBER];
-	fscanf(input, " %c %2s", &accessType, word_byte);
-	line.order = accessType == 'R' ? READ : WRITE;
-	uint64_t vaddr = 0;
-	if (line.order == READ)
-	{
-		word_byte[0] == 'I' ? handle_line_instruction(&line) : handle_line_data_read(input, &line, word_byte[1]);
-	}
-	else
-	{
-		handle_line_data_write(input, &line, word_byte[1]);
-	}
-	debug_print("Input stream at end: %d", feof(input));
-	fscanf(input, " %*c%" SCNx64, &vaddr);
-	debug_print("virt addr: 0x%08" PRIX32, vaddr);
-	debug_print("Input stream at end: %d", feof(input));
-	init_virt_addr64(&line.vaddr, vaddr);
-	return line;
-}
-
-int program_read(const char *filename, program_t *program)
-{
-	M_REQUIRE_NON_NULL(filename);
+int program_init(program_t* program){ //initialising the program
+	
 	M_REQUIRE_NON_NULL(program);
-	FILE *input;
-	;
-	debug_print("# lines at beginning of program_read: %d", program->nb_lines);
-	fprintf(stderr, "\nHELp");
-	program_init(program);
-	debug_print("# lines at beginning of program_read: %d", program->nb_lines);
-	input = fopen(filename, "r");
-	M_REQUIRE_NON_NULL(input);
+	M_REQUIRE_NON_NULL(program->listing);
+	program->listing=(command_t*)calloc(INIT_NBLINES, sizeof(command_t));//using callc to allocate and initialise to 0 an array of 10 commands
+	M_REQUIRE_NON_NULL(program->listing);
+	program->nb_lines = 0; 
+	program->allocated = INIT_NBLINES * sizeof(command_t); 
+	return ERR_NONE; 
+} 
 
-	debug_print("Right before while:", NULL);
-	do
-	{
-		debug_print("Input stream at start: %d", feof(input));
-
-		debug_print("Handle line calls %u", ++handle_line_calls, NULL);
-		command_t lineCo = handle_line(input);
-		size_t vaddr = virt_addr_t_to_uint64_t(&lineCo.vaddr);
-		debug_print("Input stream at end: %d", feof(input));
-
-		program_add_command(program, &lineCo);
-	} while (!feof(input) && !ferror(input));
-
-	debug_print("We entered %d times in the loop", handle_line_calls);
-	fclose(input);
-	program->nb_lines--;
-	program_shrink(program);
-	return ERR_NONE;
-}
-int program_init(program_t *program)
-{
-	debug_print("Entered program init", NULL);
-	debug_print("Program freed", NULL);
-	if ((program->listing = calloc(START_SIZE, sizeof(command_t))) != NULL)
-	{
-		program->allocated = START_SIZE * sizeof(command_t);
-		program->nb_lines = 0;
-		return ERR_NONE;
-	}
-	return ERR_MEM;
-}
-
-int program_print(FILE *output, const program_t *program)
-{
+int program_print(FILE* output, const program_t* program){ // printing the program 
+	
 	M_REQUIRE_NON_NULL(program);
+	M_REQUIRE_NON_NULL(program->listing);
 	M_REQUIRE_NON_NULL(output);
-	for_all_lines(line, program)
-	{
-		printline(line, output);
-	}
-	return ERR_NONE;
+	for_all_lines(line, program){ // looping trough the lines
+	 fprintf (output,(line->order == READ) ? "R ": "W "); //check for a read 
+	 fprintf (output,(line->type == INSTRUCTION) ? "I ": (line->data_size==1) ? "DB ": "DW ");
+	if(line->order == WRITE){  // checking if we need write data
+		if(line->data_size == 1) 
+			fprintf (output, "0x%02" PRIX32, line->write_data );
+		else
+			fprintf (output, "0x%04" PRIX32, line->write_data );
+		}
+	fprintf(output, " @"); 
+	uint64_t vaddr_num = virt_addr_t_to_virtual_page_number(&(line->vaddr))<<PAGE_OFFSET | (line->vaddr).page_offset;
+	fprintf (output, "0x%016" PRIX64, vaddr_num); // printing the virtual address
+	fprintf(output,"\n");
+}
+return ERR_NONE;	
 }
 
-int program_shrink(program_t *program)
-{
+int program_shrink(program_t* program){ // fitting the size of a program
+	
 	M_REQUIRE_NON_NULL(program);
-	if (program->listing != NULL && program->nb_lines > 0 && (program->listing = realloc(program->listing, sizeof(command_t) * program->nb_lines)) != NULL)
-	{
-		program->allocated = program->nb_lines * sizeof(command_t);
-	}
-	else
-	{
-		program_init(program);
-	}
-	return ERR_NONE;
+	M_REQUIRE_NON_NULL(program->listing);
+	program->allocated = program->nb_lines == 0 ? INIT_NBLINES : program->nb_lines; // allocating only a needed number of lines
+	program->listing= (command_t*)realloc(program->listing, program->allocated * sizeof(command_t)); // reallocating only needed amount of memory
+	M_REQUIRE_NON_NULL(program->listing);
+return ERR_NONE;
 }
 
-int program_add_command(program_t *program, const command_t *command)
-{
-	debug_print("In program add command", NULL);
+int program_add_command(program_t* program, const command_t* command){
 	M_REQUIRE_NON_NULL(program);
 	M_REQUIRE_NON_NULL(command);
-	bool wrongDataSize = (command->data_size != 1 && command->data_size != sizeof(word_t)) && command->type == DATA;
-	bool wrongInstructionSize = command->data_size != sizeof(word_t) && command->type == INSTRUCTION;
-	bool writtingInstruction = command->type == INSTRUCTION && command->order == WRITE;
-	bool invalidAddr = ((command->vaddr).page_offset % (uint16_t)command->data_size) != 0;
-	debug_print("About to test validity", NULL);
-
-	if (wrongDataSize || wrongInstructionSize || writtingInstruction || invalidAddr)
-	{
-		debug_print("Some conditions are not satisfied", NULL);
-		return ERR_BAD_PARAMETER;
-	}
-	debug_print("Passed error checks in program_add_command", NULL);
-	if (program->nb_lines * sizeof(command_t) == program->allocated)
-	{
-		debug_print("program->nb_lines == program->allocated is true", NULL);
-		program->allocated *= 2;
-		if ((program->listing = realloc(program->listing, sizeof(command_t) * program->allocated)) == NULL)
-		{
-			return ERR_MEM;
+	M_REQUIRE_NON_NULL(program->listing);
+	M_EXIT_IF((command->type == DATA) && ((command->data_size != 1) && (command->data_size!= sizeof(word_t))), ERR_SIZE, "data can not have length different than 1 byte or word");
+	M_EXIT_IF((command->type == INSTRUCTION) && (command->data_size!= sizeof(word_t)), ERR_SIZE, "Instructions must have length of a word");//should we use err size or err bad parameter??
+	M_EXIT_IF((command->type == INSTRUCTION) &&(command->order != READ), ERR_BAD_PARAMETER, "cannot write only read commands");	
+	size_t old_allocated = program->allocated; // saving the old allocated value to be able to initialise the new allocated memory part
+	if(program->nb_lines * sizeof(command_t) >= program->allocated){
+		program->allocated = program->allocated * 2; // doubling  the allocated size 
+		program->listing= (command_t*) realloc(program->listing, program->allocated);
+		memset(program->listing + (old_allocated/sizeof(command_t)), 0, old_allocated); // initialiing the uninitialised parts of memory
 		}
-	}
-	debug_print("Leaving program add command", NULL);
-	debug_print("Number of lines = %d", program->nb_lines);
-	program->listing[(program->nb_lines)++] = *command;
-	debug_print("Assignment done", NULL);
+	M_REQUIRE((program->nb_lines) < 100, ERR_MEM, "programm already contains 100 commands");
+	program->listing [program->nb_lines] = *command; //adding the command
+	++(program->nb_lines);
+	return ERR_NONE;
+} 
 
+
+int program_read(const char* filename, program_t* program){
+	
+	program_init(program);	
+	FILE *fp;
+	fp = fopen(filename, "r"); // read mode
+	M_REQUIRE_NON_NULL(fp);
+	   command_t command;
+	   int k;
+		while((k = fill_command(fp,&command))!=EOF){
+			
+		if((k!=ERR_NONE))
+			return k;
+			
+		if((k = program_add_command(program,&command))!=ERR_NONE)
+			return k;
+  
+ }
+	program_shrink(program);
+	fclose(fp);
+	return ERR_NONE; 
+}
+
+
+
+int fill_command(FILE* fp, command_t* command){
+
+char c;
+while (isspace(c=fgetc(fp))){}; // skipping the spaces in the begining or end of last line
+	if(c==EOF)
+		return EOF; // if we have reached End of File
+	if(c=='R')
+		command->order= READ;
+	else if(c=='W'){
+		command->order = WRITE;}
+		else{
+		M_EXIT(ERR_BAD_PARAMETER, "The command must start with R or W");}
+		
+		M_REQUIRE(isspace(fgetc(fp)), ERR_BAD_PARAMETER, "W or R must be followed by space");
+		
+while (isspace(c=fgetc(fp))){}; // might have more spaces in between 
+ switch(c){
+	case 'I': {
+				command->type=INSTRUCTION;
+				command->data_size=sizeof(word_t);
+				M_REQUIRE(isspace(fgetc(fp)), ERR_BAD_PARAMETER, "I must be followed by space");
+				break;
+				}
+	case 'D':{ 
+		command->type=DATA;
+	    c = fgetc(fp); 
+		M_REQUIRE((c=='W')||(c =='B'), ERR_BAD_PARAMETER, "Must specify data size word or byte");
+		command->data_size = (c=='W') ? sizeof(word_t) : 1;  
+		if(command->order == WRITE){
+			uint32_t writeData;
+			fscanf(fp,"%x" SCNx32 ,&writeData); // getting the write data
+			command->write_data = writeData;
+		}
+		M_REQUIRE(isspace(fgetc(fp)), ERR_BAD_PARAMETER, "WRITEDATA must be followed by space");
+		break;
+	}
+	default: {
+				M_EXIT_ERR(ERR_BAD_PARAMETER, "Must specifz a type instruction I or data D");
+	}
+  }
+	while (isspace(c=fgetc(fp))){}; // might have more spaces in between 
+	M_REQUIRE(c =='@', ERR_ADDR, "virtadd  must start with @");
+	uint64_t vaddr=0;
+	fscanf(fp,"%lx" SCNx64 ,&vaddr);
+	
+return init_virt_addr64(&(command->vaddr),vaddr); // initialising the virtual address of the command	
+}
+
+
+
+int program_free(program_t* program){ // free the memory allocated by the program
+	M_REQUIRE_NON_NULL(program);
+	M_REQUIRE_NON_NULL(program->listing);
+	free(program->listing);
+	program->listing = NULL;
+	program->nb_lines=0;
+	program->allocated=0;
+	program = NULL;
 	return ERR_NONE;
 }
 
-int program_free(program_t *program)
-{
-	debug_print("Entered free", NULL);
-
-	if (program != NULL)
-	{
-		debug_print("Program not null", NULL);
-		if (program->listing != NULL)
-		{
-			debug_print("Size of listing %ld", sizeof(program->listing));
-			free(program->listing);
-			debug_print("Successfully freed", NULL);
-			program->listing = NULL;
-		}
-		program->nb_lines = 0;
-		program->allocated = 0;
-		return ERR_NONE;
-	}
-	debug_print("about to free listing", NULL);
-	return ERR_MEM;
-}
