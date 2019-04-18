@@ -21,13 +21,20 @@ LDLIBS += -lcheck -lm -lrt -pthread -lsubunit
 all:: test-memory
 
 addr.o: addr.h
+<<<<<<< HEAD
 addr_mng.o: addr_mng.c addr_mng.h addr.h error.h
+=======
+addr_mng.o: addr_mng.h addr.h error.h addr_mng.c
+>>>>>>> 3dd57ed59575794473e08dca5ff2eddfb93e5b59
 cache.o: cache.h
 cache_mng.o: cache_mng.h mem_access.h addr.h cache.h
 commands.o: commands.c commands.h mem_access.h addr.h addr_mng.h error.h
 error.o: error.h error.c 
+<<<<<<< HEAD
 list.o: list.h
 MainTest.o: MainTest.c error.h commands.h mem_access.h addr.h addr_mng.h
+=======
+>>>>>>> 3dd57ed59575794473e08dca5ff2eddfb93e5b59
 mem_access.o: mem_access.h
 memory.o: memory.h addr.h page_walk.h addr_mng.h util.h error.h memory.c
 page_walk.o: page_walk.c page_walk.h addr.h addr_mng.h
@@ -35,6 +42,7 @@ test-addr.o: test-addr.c tests.h error.h util.h addr.h addr_mng.h
 test-commands.o: test-commands.c error.h commands.h mem_access.h addr.h
 test-memory.o: test-memory.c error.h memory.h addr.h page_walk.h util.h addr_mng.h
 tests.o: tests.h error.h
+<<<<<<< HEAD
 tlb.o: tlb.h addr.h
 tlb_hrchy.o: tlb_hrchy.h addr.h
 tlb_hrchy_mng.o: tlb_hrchy_mng.h tlb_hrchy.h addr.h mem_access.h
@@ -45,6 +53,13 @@ util.o: util.h
 ##test-addr:: addr_mng.o test-addr.o 
 ##commands:: addr_mng.o commands.o MainTest.o
 test-memory:: error.o commands.o addr_mng.o page_walk.o memory.o test-memory.o
+=======
+
+##test-addr:: addr_mng.o test-addr.o 
+##commands:: addr_mng.o commands.o 
+test-commands:: error.o commands.o addr_mng.o test-commands.o
+test-memory: error.o memory.o addr.o addr_mng.o page_walk.o test-memory.o
+>>>>>>> 3dd57ed59575794473e08dca5ff2eddfb93e5b59
 
 
 
