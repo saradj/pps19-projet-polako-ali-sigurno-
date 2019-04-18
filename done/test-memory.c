@@ -80,6 +80,7 @@ int main(int argc, char *argv[])
     if (err == ERR_NONE) {
         virt_addr_t vaddr;
         zero_init_var(vaddr);
+
         int i;
         uint64_t vaddr64;
         for(i = 5; i < argc; i++) {

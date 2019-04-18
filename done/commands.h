@@ -19,7 +19,7 @@ typedef enum command_word_type command_word_t;
 typedef struct {
 	
 command_word_t order;
-mem_access_t taille;
+mem_access_t type;
 size_t data_size;
 word_t write_data;
 virt_addr_t vaddr;

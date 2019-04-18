@@ -16,81 +16,72 @@
 #include "addr_mng.h"
 #include "addr.h"
 
-int k = VIRT_ADDR_RES ;
+#define INIT_NBLINES    10
 
 int fill_command(FILE* fp, command_t* command);
 
 int program_init(program_t* program){
-	program->listing=(command_t*)calloc(10, sizeof(command_t));
-	M_REQUIRE_NON_NULL((program->listing));
-program->nb_lines = 0;
-program->allocated = 10;
-return ERR_NONE; //???
+	
+	M_REQUIRE_NON_NULL(program);
+	M_REQUIRE_NON_NULL(program->listing);
+	program->listing=(command_t*)calloc(INIT_NBLINES, sizeof(command_t));
+	M_REQUIRE_NON_NULL(program->listing);
+	program->nb_lines = 0;
+	program->allocated = INIT_NBLINES*sizeof(command_t);
+	return ERR_NONE; 
 } 
 
 int program_print(FILE* output, const program_t* program){
 	
 	M_REQUIRE_NON_NULL(program);
+	M_REQUIRE_NON_NULL(program->listing);
 	M_REQUIRE_NON_NULL(output);
 	for_all_lines(line, program){
 	 fprintf (output,(line->order==READ) ? "R ": "W ");
-	 fprintf (output,(line->taille==INSTRUCTION) ? "I ": (line->data_size==1) ? "DB ": "DW ");
+	 fprintf (output,(line->type==INSTRUCTION) ? "I ": (line->data_size==1) ? "DB ": "DW ");
 	if( line->order==WRITE){
-	//fprintf (output, line->data_size == 1 ? ("0x%02" PRIX32, line->write_data) : ("0x%08" PRIX32, line->write_data ));
-	if(line->data_size == 1)
-	fprintf (output, "0x%02" PRIX32, line->write_data );
-	else
-	fprintf (output, "0x%04" PRIX32, line->write_data );}
+		if(line->data_size == 1)
+			fprintf (output, "0x%02" PRIX32, line->write_data );
+		else
+			fprintf (output, "0x%04" PRIX32, line->write_data );
+		}
 	fprintf(output, " @");
-	uint64_t v= virt_addr_t_to_virtual_page_number(&(line->vaddr))<<12 |(line->vaddr).page_offset;
-	fprintf (output, "0x%016" PRIX64, virt_addr_t_to_virtual_page_number(&(line->vaddr))<<12  );
-	fprintf (output, "0x%016" PRIX64, v );
-	//print_virtual_address(output, &(line->vaddr));
+	uint64_t vaddr_num = virt_addr_t_to_virtual_page_number(&(line->vaddr))<<PAGE_OFFSET | (line->vaddr).page_offset;
+	fprintf (output, "0x%016" PRIX64, vaddr_num);
 	fprintf(output,"\n");
-	
 }
 return ERR_NONE;	
 }
 
 int program_shrink(program_t* program){
-M_REQUIRE_NON_NULL(program);
-M_REQUIRE_NON_NULL(program->listing);
-program->allocated = program->nb_lines == 0 ? 10 : program->nb_lines;
-program->listing= (command_t*)realloc(program->listing, program->allocated * sizeof(command_t));
+	
+	M_REQUIRE_NON_NULL(program);
+	M_REQUIRE_NON_NULL(program->listing);
+	program->allocated = program->nb_lines == 0 ? INIT_NBLINES : program->nb_lines;
+	program->listing= (command_t*)realloc(program->listing, program->allocated * sizeof(command_t));
 
 return ERR_NONE;
 }
 
 int program_add_command(program_t* program, const command_t* command){
-	//fprintf(stderr,"err in prog \n");
-M_REQUIRE_NON_NULL(program);
-M_REQUIRE_NON_NULL(command);
-M_REQUIRE_NON_NULL(program->listing);
-M_EXIT_IF((command->taille == DATA) && ((command->data_size != 1) && (command->data_size!= sizeof(word_t))), ERR_SIZE, "data can not have length different than 1 byte or word");
-
-M_EXIT_IF((command->taille == INSTRUCTION) && (command->data_size!= sizeof(word_t)), ERR_SIZE, "Instructions must have length of a word");//should we use err size or err bad parameter??
-
-M_EXIT_IF((command->taille == INSTRUCTION) &&(command->order != READ), ERR_BAD_PARAMETER, "cannot write only read commands");
-
-M_EXIT_IF((program->allocated) > 100,ERR_SIZE, "Can only allocate 100 programs");
-
-(program->nb_lines);
-
-if(program->nb_lines>=program->allocated){
-	
-	program->allocated =program->allocated * 2;
-program->listing= (command_t*)realloc(program->listing, program->allocated * sizeof(command_t));
-fprintf(stderr, "here");
-memset(program->listing + 10, 0, 10*sizeof(command_t));
-fprintf(stderr, "after");
-
-}
-M_EXIT_IF((program->allocated) > 100,ERR_SIZE, "Can only allocate 100 programs");
-M_REQUIRE((program->nb_lines) < 100, ERR_MEM, "programm already contains 100 commands");
-program->listing [program->nb_lines] = *command;
-++(program->nb_lines);
-return ERR_NONE;
-
+	M_REQUIRE_NON_NULL(program);
+	M_REQUIRE_NON_NULL(command);
+	M_REQUIRE_NON_NULL(program->listing);
+	M_EXIT_IF((command->type == DATA) && ((command->data_size != 1) && (command->data_size!= sizeof(word_t))), ERR_SIZE, "data can not have length different than 1 byte or word");
+	M_EXIT_IF((command->type == INSTRUCTION) && (command->data_size!= sizeof(word_t)), ERR_SIZE, "Instructions must have length of a word");//should we use err size or err bad parameter??
+	M_EXIT_IF((command->type == INSTRUCTION) &&(command->order != READ), ERR_BAD_PARAMETER, "cannot write only read commands");	
+	M_EXIT_IF((program->allocated)/sizeof(command_t) > 100,ERR_SIZE, "Can only allocate 100 programs");
+	size_t old_allocated = program->allocated;
+	if(program->nb_lines* sizeof(command_t) >= program->allocated){
+		program->allocated = program->allocated * 2;
+		program->listing= (command_t*) realloc(program->listing, program->allocated);
+		memset(program->listing + (old_allocated/sizeof(command_t)), 0, old_allocated);
+		}
+		
+	M_REQUIRE((program->nb_lines) < 100, ERR_MEM, "programm already contains 100 commands");
+	program->listing [program->nb_lines] = *command;
+	++(program->nb_lines);
+	return ERR_NONE;
 } 
 
 int program_read(const char* filename, program_t* program){
@@ -98,7 +89,6 @@ int program_read(const char* filename, program_t* program){
 	
 	FILE *fp;
 	fp = fopen(filename, "r"); // read mode
-	
 	M_REQUIRE_NON_NULL(fp);
 		
 	   command_t command;// should we initiaise it??
@@ -113,7 +103,9 @@ int program_read(const char* filename, program_t* program){
 			if(k!=ERR_NONE){
 	fprintf(stderr,"err in prog \n");
 	  return k;
-  }}
+	  //use shrink!!
+  }
+  }
  }
 	fclose(fp);
 	return ERR_NONE; 
@@ -131,8 +123,8 @@ if(c==EOF)
 	
 fprintf(stderr, "charr == %c", c);
 
-if(c=='R'){
-		command->order= READ;}
+if(c=='R')
+		command->order= READ;
 		else if(c=='W'){
 		
 		command->order = WRITE;}
@@ -144,13 +136,13 @@ if(c=='R'){
 
  switch(fgetc(fp)){
 	case 'I': {
-				command->taille=INSTRUCTION;
+				command->type=INSTRUCTION;
 				command->data_size=sizeof(word_t);
 				M_REQUIRE(isspace(fgetc(fp)), ERR_BAD_PARAMETER, "I must be followed by space");
 				break;
 				}
 	case 'D':{ 
-		command->taille=DATA;
+		command->type=DATA;
 		c=fgetc(fp);
 		M_REQUIRE((c=='W')||(c =='B'), ERR_BAD_PARAMETER, "Must specify data size word or byte");
 		command->data_size= (c=='W') ? sizeof(word_t) : 1;
@@ -159,15 +151,12 @@ if(c=='R'){
 			fscanf(fp,"%lx" SCNx64 ,&writeData);
 			command->write_data = writeData;
 		}
-		
 		M_REQUIRE(isspace(fgetc(fp)), ERR_BAD_PARAMETER, "WRITEDATA must be followed by space");
 	}	
   }
-
-
 	while (isspace(c=fgetc(fp))){};
 	M_REQUIRE(c=='@', ERR_ADDR, "virtadd  must start with @");
-	uint64_t vaddr;
+	uint64_t vaddr=0;
 	fscanf(fp,"%lx" SCNx64 ,&vaddr);
 	init_virt_addr64(&(command->vaddr),vaddr);	
 	fprintf(stderr, " virt = %lx \n", vaddr);

@@ -2,7 +2,7 @@
 ## partial Makefile provided to students
 ##
 
-CFLAGS = -std=c11 -Wall -Wpedantic -g
+CFLAGS = -std=c11 -Wall -Wpedantic -g -lcheck -lm -lrt -pthread -lsubunit
 
 # a bit more checks if you'd like to (uncomment
 # CFLAGS += -Wextra -Wfloat-equal -Wshadow                         \
@@ -10,7 +10,7 @@ CFLAGS = -std=c11 -Wall -Wpedantic -g
 # -Wconversion -Wunreachable-code
 
 # uncomment if you want to add DEBUG flag
-CPPFLAGS += -DDEBUG
+#CPPFLAGS += -DDEBUG
 
 # ----------------------------------------------------------------------
 # feel free to update/modifiy this part as you wish
@@ -20,19 +20,32 @@ LDLIBS += -lcheck -lm -lrt -pthread -lsubunit
 
 all:: test-memory
 
+addr.o: addr.h
 addr_mng.o: addr_mng.c addr_mng.h addr.h error.h
-commands.o: commands.c commands.h mem_access.h addr.h error.h addr_mng.h
-error.o: error.c
-memory.o: memory.c memory.h addr.h page_walk.h addr_mng.h util.h error.h
-page_walk.o: page_walk.c page_walk.h addr.h addr_mng.h error.h
+cache.o: cache.h
+cache_mng.o: cache_mng.h mem_access.h addr.h cache.h
+commands.o: commands.c commands.h mem_access.h addr.h addr_mng.h error.h
+error.o: error.h error.c 
+list.o: list.h
+MainTest.o: MainTest.c error.h commands.h mem_access.h addr.h addr_mng.h
+mem_access.o: mem_access.h
+memory.o: memory.h addr.h page_walk.h addr_mng.h util.h error.h memory.c
+page_walk.o: page_walk.c page_walk.h addr.h addr_mng.h
 test-addr.o: test-addr.c tests.h error.h util.h addr.h addr_mng.h
 test-commands.o: test-commands.c error.h commands.h mem_access.h addr.h
-test-memory.o: test-memory.c error.h memory.h addr.h page_walk.h util.h \
- addr_mng.h
-test-tlb_simple.o: test-tlb_simple.c error.h util.h addr_mng.h addr.h \
- commands.h mem_access.h memory.h list.h tlb.h tlb_mng.h
+test-memory.o: test-memory.c error.h memory.h addr.h page_walk.h util.h addr_mng.h
+tests.o: tests.h error.h
+tlb.o: tlb.h addr.h
+tlb_hrchy.o: tlb_hrchy.h addr.h
+tlb_hrchy_mng.o: tlb_hrchy_mng.h tlb_hrchy.h addr.h mem_access.h
+tlb_mng.o: tlb_mng.h tlb.h addr.h list.h
+util.o: util.h
 
-test-memory: test-memory.o memory.o page_walk.o addr_mng.o
+
+##test-addr:: addr_mng.o test-addr.o 
+##commands:: addr_mng.o commands.o MainTest.o
+test-memory:: error.o commands.o addr_mng.o page_walk.o memory.o test-memory.o
+
 
 
 # ----------------------------------------------------------------------
@@ -61,9 +74,8 @@ check:: all
 	  for file in tests/*.*.sh; do [ -x $$file ] || echo "Launching $$file"; ./$$file || exit 1; done; \
 	fi
 
-IMAGE=arashpz/feedback:latest
+IMAGE=arashpz/feedback
 feedback:
-	@docker pull $(IMAGE)
 	@docker run -it --rm -v ${PWD}:/home/tester/done $(IMAGE)
 
 SUBMIT_SCRIPT=../provided/submit.sh
