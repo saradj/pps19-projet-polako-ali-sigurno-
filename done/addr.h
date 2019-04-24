@@ -25,7 +25,6 @@
 /* the number of entries in a page directory = 2^9
 * each entry size is equal to the size of a physical address = 32b
 */
-<<<<<<< HEAD
 #define PD_ENTRIES 512
 
 #define VIRT_PAGE_NUM 36 // = PTE_ENTRY + PUD_ENTRY + PMD_ENTRY + PGD_ENTRY
@@ -35,7 +34,15 @@
 #define PHY_PAGE_NUM 20
 #define PHY_ADDR 32 // = PHY_PAGE_NUM + PAGE_OFFSET
 
-
+/* TODO WEEK 04:
+ * Définir ici les types
+ *      word_t,
+ *      byte_t,
+ *      pte_t,
+ *      virt_addr_t
+ *  et phy_addr_t
+ * (et supprimer ces huit lignes de commentaire).
+ */
 
 /**
  * @brief type representing a word in memory
@@ -45,22 +52,8 @@ typedef uint32_t word_t;
 /**
  * @brief type representing a byte in memory
  */
-=======
-#define PD_ENTRIES      512
-
-#define VIRT_PAGE_NUM   36 // = PTE_ENTRY + PUD_ENTRY + PMD_ENTRY + PGD_ENTRY
-#define VIRT_ADDR_RES   16
-#define VIRT_ADDR       64 // = VIRT_ADDR_RES + 4*9 + PAGE_OFFSET
-
-#define PHY_PAGE_NUM    20
-#define PHY_ADDR        32 // = PHY_PAGE_NUM + PAGE_OFFSET
-
-
-typedef  uint32_t word_t;
->>>>>>> 3dd57ed59575794473e08dca5ff2eddfb93e5b59
 typedef uint8_t byte_t;
 
-<<<<<<< HEAD
 /**
  * @brief type representing a page table entry
  */
@@ -80,15 +73,6 @@ typedef struct
 	uint16_t pmd_entry : PMD_ENTRY;
 	uint16_t pte_entry : PTE_ENTRY;
 	uint16_t page_offset : PAGE_OFFSET;
-=======
-typedef struct {
-uint16_t reserved : VIRT_ADDR_RES; 
-uint16_t pgd_entry : PGD_ENTRY;
-uint16_t pud_entry : PUD_ENTRY;
-uint16_t pmd_entry : PMD_ENTRY;
-uint16_t  pte_entry : PTE_ENTRY;
-uint16_t page_offset : PAGE_OFFSET;
->>>>>>> 3dd57ed59575794473e08dca5ff2eddfb93e5b59
 } virt_addr_t;
 
 /**
