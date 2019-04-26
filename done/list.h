@@ -28,6 +28,7 @@ typedef uint32_t list_content_t;
  * @brief Doubly linked list type
  *
  */
+ 
 typedef struct node node_t;
 struct list {
     node_t* front;

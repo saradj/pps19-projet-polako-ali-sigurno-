@@ -12,11 +12,11 @@
 #include "addr.h"
 #include "list.h"
 
-/* TODO WEEK 08:
- * Définir ici le type replacement_policy_t
- * (et supprimer ces quatre lignes de commentaire).
- */
-
+typedef struct{
+	list_t* ll;
+	node_t* (*push_back)(list_t* this, const list_content_t* value);
+	void (*move_back)(list_t* this, node_t* node);
+	} replacement_policy_t;
 //=========================================================================
 /**
  * @brief Clean a TLB (invalidate, reset...).
@@ -25,6 +25,7 @@
  * @param tlb pointer to the TLB
  * @return error code
  */
+ 
 int tlb_flush(tlb_entry_t * tlb);
 
 //=========================================================================
