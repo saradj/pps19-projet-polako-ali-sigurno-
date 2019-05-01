@@ -12,7 +12,6 @@
 int is_empty_list(const list_t* this){// what does well formed mean??
 	M_REQUIRE_NON_NULL(this);
 	return (this->front==this->back&&this->back==NULL);
-	
 }
 
 void init_list(list_t* this){// shoud not allocate memory!!!
@@ -33,10 +32,9 @@ void clear_list(list_t* this){// should we do this=NULL?
 
 
 node_t* push_back(list_t* this, const list_content_t* value){//do we use Least recently used?
-	//M_REQUIRE_NON_NULL(this);
-	//M_REQUIRE_NON_NULL(value);
-	node_t* n; // should we do a pointer and calloc??
-	n= malloc(sizeof(*n));
+	M_REQUIRE_NON_NULL(this);
+	M_REQUIRE_NON_NULL(value);
+	node_t* n= malloc(sizeof(*n));
 	if(n!=NULL){
 	n->value = *value;
 	n->previous=this->back;
@@ -52,11 +50,10 @@ node_t* push_back(list_t* this, const list_content_t* value){//do we use Least r
 	
 }
 
-node_t* push_front(list_t* this, const list_content_t* value){// change heree!! same like push back!!
-	//assert (M_REQUIRE_NON_NULL(this));
-	//M_REQUIRE_NON_NULL(value);
-	node_t* n; 
-	n= malloc(sizeof(*n));
+node_t* push_front(list_t* this, const list_content_t* value){
+	M_REQUIRE_NON_NULL(this);
+	M_REQUIRE_NON_NULL(value);
+	node_t* n= malloc(sizeof(*n));
 		if(n!=NULL){
 	n->value = *value;
 	n->previous=NULL;
@@ -77,16 +74,25 @@ void pop_back(list_t* this){
 	if(!is_empty_list(this)){
 		node_t* last = this->back;
 		this->back= last->previous;
+		if(last->previous==NULL)// if there was just one element left
+		this->front=NULL;
+		else
+		last->previous->next=NULL;
 		free(last);
 	}
+	else fprintf(stderr, "List is empty nothing to pop");
 }
 void pop_front(list_t* this){
 	//M_REQUIRE_NON_NULL(this);
 	if(!is_empty_list(this)){
 		node_t* first = this->front;
 		this->front= first->next;
+		if(first->next==NULL)// if there was just one element left
+		this->back=NULL;
+		else
+		first->next->previous=NULL;
 		free(first);
-	}
+	}else fprintf(stderr, "List is empty nothing to pop");
 }
 
 
