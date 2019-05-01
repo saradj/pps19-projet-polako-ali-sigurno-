@@ -93,8 +93,7 @@ int mem_init_from_dumpfile(const char* filename, void** memory, size_t* mem_capa
     
     FILE *file;
     file = fopen(filename, "rb"); // read binary mode
-    
-    M_REQUIRE(file!=NULL, ERR_IO, "file not open correctly");
+    M_REQUIRE_NON_NULL_CUSTOM_ERR(file, ERR_IO);
     
     // va tout au bout du fichier
     fseek(file, 0L, SEEK_END);
@@ -107,7 +106,7 @@ int mem_init_from_dumpfile(const char* filename, void** memory, size_t* mem_capa
     memset(*memory, 0, *mem_capacity_in_bytes );
     
     
-    M_REQUIRE(fread(*memory, *mem_capacity_in_bytes, BYTE_SIZE, file)== BYTE_SIZE, ERR_MEM, "Error whie reading file");
+    M_REQUIRE(fread(*memory, *mem_capacity_in_bytes, BYTE_SIZE, file)== BYTE_SIZE, ERR_MEM, "Error whie reading file, number of cheracters read: %d",BYTE_SIZE );
     fclose(file);
     
 return ERR_NONE;
@@ -118,8 +117,8 @@ return ERR_NONE;
 static int page_file_read(char* filename, void* phyaddr){ //helper method to read at physical address from file
     FILE *file;
     file = fopen(filename, "rb"); // read binary mode
-    M_REQUIRE(file!=NULL, ERR_IO, "File did not open correctly");
-    M_REQUIRE(fread(phyaddr, FOURKI, BYTE_SIZE, file)== BYTE_SIZE, ERR_MEM, "Error whie reading file");
+    M_REQUIRE_NON_NULL_CUSTOM_ERR(file, ERR_IO);
+    M_REQUIRE(fread(phyaddr, FOURKI, BYTE_SIZE, file)== BYTE_SIZE, ERR_MEM, "Error whie reading file number of cheracters read: %d",BYTE_SIZE );
     fclose(file);
     return ERR_NONE;
     }
@@ -128,7 +127,7 @@ int mem_init_from_description(const char* master_filename, void** memory, size_t
 
     FILE *file;
     file = fopen(master_filename, "rb"); // read binary mode
-    M_REQUIRE(file!=NULL, ERR_IO, "file not open correctly");
+    M_REQUIRE_NON_NULL_CUSTOM_ERR(file, ERR_IO);
     fscanf(file,"%zu",mem_capacity_in_bytes);//getting the total bytes to store 
     *memory = malloc(*mem_capacity_in_bytes);
     char pgd_filename [MAXSIZE_STRING];

@@ -4,13 +4,13 @@
 
 CFLAGS = -std=c11 -Wall -Wpedantic -g
 
-# a bit more checks if you'd like to (uncomment
-# CFLAGS += -Wextra -Wfloat-equal -Wshadow                         \
-# -Wpointer-arith -Wbad-function-cast -Wcast-align -Wwrite-strings \
-# -Wconversion -Wunreachable-code
+ #a bit more checks if you'd like to (uncomment
+ CFLAGS += -Wextra -Wfloat-equal -Wshadow                         \
+ -Wpointer-arith -Wbad-function-cast -Wcast-align -Wwrite-strings \
+ -Wconversion -Wunreachable-code
 
 # uncomment if you want to add DEBUG flag
-# CPPFLAGS += -DDEBUG
+ CPPFLAGS += -DDEBUG
 
 # ----------------------------------------------------------------------
 # feel free to update/modifiy this part as you wish
@@ -18,23 +18,33 @@ CFLAGS = -std=c11 -Wall -Wpedantic -g
 # all those libs are required on Debian, feel free to adapt it to your box
 LDLIBS += -lcheck -lm -lrt -pthread -lsubunit
 
-all:: test-memory
+all:: test-addr test-commands test-memory test-tlb_simple test-tlb_hrchy
 
-addr_mng.o: error.h addr.h addr_mng.h addr_mng.c
-commands.o: commands.h mem_access.h addr.h addr_mng.h error.h commands.c 
-error.o: error.h error.c
-memory.o: memory.h addr.h page_walk.h addr_mng.h util.h error.h memory.c
-page_walk.o: addr.h addr_mng.h error.h page_walk.c 
+
+MainTest.o: MainTest.c error.h commands.h mem_access.h addr.h addr_mng.h
+addr-mng.o: addr-mng.c addr_mng.h addr.h error.h
+commands.o: commands.c commands.h mem_access.h addr.h error.h addr_mng.h
+error.o: error.c
+list.o: list.c list.h error.h
+memory.o: memory.c memory.h addr.h page_walk.h addr_mng.h util.h error.h
+page_walk.o: page_walk.c page_walk.h addr.h addr_mng.h error.h
 test-addr.o: test-addr.c tests.h error.h util.h addr.h addr_mng.h
 test-commands.o: test-commands.c error.h commands.h mem_access.h addr.h
-test-memory.o: test-memory.c error.h memory.h addr.h page_walk.h util.h addr_mng.h
-
+test-memory.o: test-memory.c error.h memory.h addr.h page_walk.h util.h \
+ addr_mng.h
+test-tlb_hrchy.o: test-tlb_hrchy.c error.h util.h addr_mng.h addr.h \
+ commands.h mem_access.h memory.h tlb_hrchy.h tlb_hrchy_mng.h page_walk.h
+test-tlb_simple.o: test-tlb_simple.c error.h util.h addr_mng.h addr.h commands.h mem_access.h memory.h list.h tlb.h tlb_mng.h
+tlb_hrchy_mng.o: tlb_hrchy_mng.c tlb_hrchy.h tlb_mng.h tlb.h addr.h list.h addr_mng.h error.h \
+ page_walk.h 
+tlb_mng.o: tlb_mng.c tlb_mng.h tlb.h addr.h list.h addr_mng.h error.h \
+ page_walk.h
 
 test-addr: test-addr.o error.o addr_mng.o
 test-commands: test-commands.o error.o addr_mng.o commands.o 
 test-memory: test-memory.o error.o memory.o page_walk.o addr_mng.o 
-
-
+test-tlb_simple: test-tlb_simple.o error.o list.o addr-mng.o memory.o page_walk.o tlb_mng.o commands.o
+test-tlb_hrchy: test-tlb_hrchy.o tlb_hrchy_mng.o error.o addr-mng.o commands.o memory.o page_walk.o
 # ----------------------------------------------------------------------
 # This part is to make your life easier. See handouts how to make use of it.
 

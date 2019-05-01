@@ -39,14 +39,18 @@ node_t* push_back(list_t* this, const list_content_t* value){//do we use Least r
 	n->value = *value;
 	n->previous=this->back;
 	n->next=NULL;
+	if(is_empty_list(this)){
+		this->back=n;
+		this->front=n;
+	}else{
 	this->back->next=n;
 	this->back=n;
-	}
+	}}
 	return n;
 	
 }
 
-node_t* push_front(list_t* this, const list_content_t* value){
+node_t* push_front(list_t* this, const list_content_t* value){// change heree!! same like push back!!
 	//assert (M_REQUIRE_NON_NULL(this));
 	//M_REQUIRE_NON_NULL(value);
 	node_t* n; 
@@ -55,6 +59,7 @@ node_t* push_front(list_t* this, const list_content_t* value){
 	n->value = *value;
 	n->previous=NULL;
 	n->next=this->front;
+	if(!is_empty_list(this))
 	this->front->previous=n;
 	this->front=n;
 	}
@@ -80,10 +85,25 @@ void pop_front(list_t* this){
 
 
 void move_back(list_t* this, node_t* node){
+	
+	if(node->next==NULL)
+	return;// nothing to be done if one node already last
+	if(node->previous==NULL){// if it's the first node
+	this->front=node->next;
+	node->next->previous=NULL;
+	}
+	else{
 	node->previous->next=node->next;
+
 	node->next->previous=node->previous;
-	assert (NULL != push_back(this, &node->value));// should we assert?? 
+	}
+	list_content_t val= node->value;
+	free(node);
+	assert (NULL != push_back(this, &val));// should we assert?? 
+		
 }
+
+
 int print_list(FILE* stream, const list_t* this){
 	M_REQUIRE_NON_NULL(this);
 	M_REQUIRE_NON_NULL_CUSTOM_ERR(stream, ERR_IO);
