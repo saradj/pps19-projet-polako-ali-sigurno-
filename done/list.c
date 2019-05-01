@@ -23,10 +23,12 @@ void init_list(list_t* this){// shoud not allocate memory!!!
 }
 void clear_list(list_t* this){// should we do this=NULL?
 	//M_REQUIRE_NON_NULL(this); // should we assert ?
-	free(this->front);
-	free(this->back);
+	node_t* next=NULL;
+	for(node_t* tmp=this->front; tmp!=NULL; tmp=next){
+	next=tmp->next;
+	free(tmp);
+	}
 	init_list(this);
-	
 }
 
 
@@ -59,10 +61,14 @@ node_t* push_front(list_t* this, const list_content_t* value){// change heree!! 
 	n->value = *value;
 	n->previous=NULL;
 	n->next=this->front;
-	if(!is_empty_list(this))
+	if(is_empty_list(this)){
+		this->back=n;
+		this->front=n;
+	}else{
 	this->front->previous=n;
 	this->front=n;
-	}
+	
+	}}
 	return n;
 }
 
