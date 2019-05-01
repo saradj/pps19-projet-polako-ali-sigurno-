@@ -22,7 +22,7 @@ all:: test-addr test-commands test-memory test-tlb_simple test-tlb_hrchy
 
 
 MainTest.o: MainTest.c error.h commands.h mem_access.h addr.h addr_mng.h
-addr-mng.o: addr-mng.c addr_mng.h addr.h error.h
+addr_mng.o: addr_mng.c addr_mng.h addr.h error.h
 commands.o: commands.c commands.h mem_access.h addr.h error.h addr_mng.h
 error.o: error.c
 list.o: list.c list.h error.h
@@ -43,8 +43,8 @@ tlb_mng.o: tlb_mng.c tlb_mng.h tlb.h addr.h list.h addr_mng.h error.h \
 test-addr: test-addr.o error.o addr_mng.o
 test-commands: test-commands.o error.o addr_mng.o commands.o 
 test-memory: test-memory.o error.o memory.o page_walk.o addr_mng.o 
-test-tlb_simple: test-tlb_simple.o error.o list.o addr-mng.o memory.o page_walk.o tlb_mng.o commands.o
-test-tlb_hrchy: test-tlb_hrchy.o tlb_hrchy_mng.o error.o addr-mng.o commands.o memory.o page_walk.o
+test-tlb_simple: test-tlb_simple.o error.o list.o addr_mng.o memory.o page_walk.o tlb_mng.o commands.o
+test-tlb_hrchy: test-tlb_hrchy.o tlb_hrchy_mng.o error.o addr_mng.o commands.o memory.o page_walk.o
 # ----------------------------------------------------------------------
 # This part is to make your life easier. See handouts how to make use of it.
 

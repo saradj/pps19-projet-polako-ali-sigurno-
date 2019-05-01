@@ -39,3 +39,17 @@
  *    - et tlb_t;
  * (et supprimer ces huit lignes de commentaire).
  */
+typedef struct{
+uint32_t tag : VIRT_PAGE_NUM-L1_ITLB_LINES_BITS;
+uint32_t phy_page_num: PHY_PAGE_NUM;
+uint8_t v: 1;
+}l1_itlb_entry_t;
+
+typedef l1_itlb_entry_t l1_dtlb_entry_t;
+typedef struct{
+uint32_t tag : VIRT_PAGE_NUM-L2_TLB_LINES_BITS;
+uint32_t phy_page_num: PHY_PAGE_NUM;
+uint8_t v: 1;
+}l2_tlb_entry_t;
+
+typedef enum {L1_ITLB, L1_DTLB, L2_TLB}tlb_t;

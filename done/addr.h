@@ -34,16 +34,6 @@
 #define PHY_PAGE_NUM 20
 #define PHY_ADDR 32 // = PHY_PAGE_NUM + PAGE_OFFSET
 
-/* TODO WEEK 04:
- * Définir ici les types
- *      word_t,
- *      byte_t,
- *      pte_t,
- *      virt_addr_t
- *  et phy_addr_t
- * (et supprimer ces huit lignes de commentaire).
- */
-
 /**
  * @brief type representing a word in memory
  */
