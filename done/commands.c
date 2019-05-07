@@ -23,7 +23,6 @@ int fill_command(FILE* fp, command_t* command);
 int program_init(program_t* program){ //initialising the program
 	
 	M_REQUIRE_NON_NULL(program);
-	//M_REQUIRE_NON_NULL(program->listing);
 	program->listing=(command_t*)calloc(INIT_NBLINES, sizeof(command_t));//using callc to allocate and initialise to 0 an array of 10 commands
 	M_EXIT_IF_NULL(program->listing, INIT_NBLINES * sizeof(command_t));
 	program->nb_lines = 0; 
@@ -95,16 +94,16 @@ int program_read(const char* filename, program_t* program){
 	   int k;
 		while((k = fill_command(fp,&command))!=EOF){
 			
-		if((k!=ERR_NONE))
-			return k;
+		if((k!=ERR_NONE)){
+		
+			return k;}
 			
-		if((k = program_add_command(program,&command))!=ERR_NONE)
-			return k;
-  
+		if((k = program_add_command(program,&command))!=ERR_NONE){
+			fclose(fp);
+			return k;}
  }
 	program_shrink(program);
 	fclose(fp);
-//	program_free(program);
 	return ERR_NONE; 
 }
 
