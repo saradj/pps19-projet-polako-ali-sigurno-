@@ -1,0 +1,53 @@
+- id: group_3a8237
+- Makefile: 3           # max 3, 
+- addr.h: # NE PAS REMPLIR CETTE LIGNE
+    trois typedef: 2.5   # max 3, merge pas fait (-0.5)
+    virt_addr_t: 4     # max 5, merge pas fait (-1)
+    phy_addr_t: 5     # max 5, 
+- addr_mng.c: # NE PAS REMPLIR CETTE LIGNE
+  - init_virt_addr(): 4.5                     # max 6, pas de verification de page_offset (-0.5), initialisation reserved absente (-1)
+  - init_virt_addr64(): 5.5                   # max 6, 
+  - init_phy_addr(): 2                        # max 4, verification d'arguments manquantes (-1), formule de phy_page_num inccorect (-1)
+  - virt_addr_t_to_uint64_t(): 5              # max 5, 
+  - virt_addr_t_to_virtual_page_number(): 3.5 # max 5, formule incorrecte (-1.5)
+  - print_virtual_address(): 3                # max 3, 
+  - print_physical_address(): 3               # max 3, 
+- commands.h: # NE PAS REMPLIR CETTE LIGNE
+    command_word_t: 2   # max 2, 
+    command_t: 7        # max 7, 
+    program_t: 5        # max 5, 
+- commands.c: # NE PAS REMPLIR CETTE LIGNE
+  - program_print(): 6.5       # max 7, print padding de zero incorrect (-0.5)
+  - program_init(): 5          # max 6, verification fause d'argument (-0.5), sortie non propre (-0.5)
+  - program_add_command(): 15  # max 16, modifications si echec (-1)
+  - program_shrink(): 4        # max 6, perte de l'ancien pointeur en cas d'echec (-1), modification si echec (-1) 
+  - program_read(): # NE PAS REMPLIR CETTE LIGNE
+      modularisation: 5              # max 5, 
+      get_next_nonspace_char(): 3    # max 3, 
+      do_D(): 8                      # max 8, 
+      do_R(): 8                      # max 8, 
+      do_W(): 8                      # max 8, 
+      command_line_read(): 10        # max 10, 
+      core: 7                        # max 11, pas de verification des retour de scanf (-2), sortie non prore/pas de fclose (-2)
+  - program_free(): 6                # max 6, 
+- memory.c: # NE PAS REMPLIR CETTE LIGNE
+  - mem_init_from_dumpfile(): # NE PAS REMPLIR CETTE LIGNE
+      vérifications d\'usage: 0   # max 2, pas fait (-2)
+      ouverture fichier: 5        # max 5, 
+      allocation mémoire: 4       # max 5, pas de free en cas d'erreur a la fin (-1)
+      lecture fichier: 5          # max 5, 
+      fermeture fichier: 1.5      # max 2, sortie sans fermeture si M_REQUIRE echoue (-0.5)
+  - mem_init_from_description(): # NE PAS REMPLIR CETTE LIGNE
+      vérifications d\'usage: 0     # max 2, pas fait
+      ouverture fichier: 5          # max 5, 
+      allocation mémoire: 5         # max 5, 
+      lecture PGD page filename: 5  # max 5, 
+      page_file_read(): 7           # max 8, sortie sans fermeture si M_REQUIRE ehcoue (-0.5), verification de l'index absente (-0.5)
+      lecture PUDs:  11             # max 15, pas de verification des retourn des scanf (-2), verification des retours de fonctions (-2)
+      lecture pages data:  11       # max 15, pas de verification des retourn des scanf (-2), verification des retours de fonctions (-2)
+      fermeture fichier: 2          # max 2, 
+- page_walk.c: # NE PAS REMPLIR CETTE LIGNE
+    read_page_entry(): 1.75 # max 2, magic number (il faudrait diviser par la taille de pte_t et non pas shift de 2...)(-0.25)
+    page_walk():  8         # max 12, verification arguments (-2), pas de verification des retour de read_page_entry (-2)
+- style: 0       # max 2, min -2, indentation absente par moments (-2) 
+- bonus/malus: 0 # max 5, min -5, 
