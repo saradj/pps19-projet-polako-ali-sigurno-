@@ -38,10 +38,10 @@ int tlb_flush(void *tlb, tlb_t tlb_type);
  * @return hit (1) or miss (0)
  */
 
-int tlb_hit( const virt_addr_t * vaddr,
-             phy_addr_t * paddr,
-             const void  * tlb,
-             tlb_t tlb_type);
+int tlb_hit(const virt_addr_t *vaddr,
+            phy_addr_t *paddr,
+            const void *tlb,
+            tlb_t tlb_type);
 
 //=========================================================================
 /**
@@ -54,10 +54,10 @@ int tlb_hit( const virt_addr_t * vaddr,
  * @return  error code
  */
 
-int tlb_insert( uint32_t line_index,
-                const void * tlb_entry,
-                void * tlb,
-                tlb_t tlb_type);
+int tlb_insert(uint32_t line_index,
+               const void *tlb_entry,
+               void *tlb,
+               tlb_t tlb_type);
 
 //=========================================================================
 /**
@@ -69,10 +69,10 @@ int tlb_insert( uint32_t line_index,
  * @return  error code
  */
 
-int tlb_entry_init( const virt_addr_t * vaddr,
-                    const phy_addr_t * paddr,
-                    void * tlb_entry,
-                    tlb_t tlb_type);
+int tlb_entry_init(const virt_addr_t *vaddr,
+                   const phy_addr_t *paddr,
+                   void *tlb_entry,
+                   tlb_t tlb_type);
 
 //=========================================================================
 /**
@@ -89,11 +89,11 @@ int tlb_entry_init( const virt_addr_t * vaddr,
  * @return error code
  */
 
-int tlb_search( const void * mem_space,
-                const virt_addr_t * vaddr,
-                phy_addr_t * paddr,
-                mem_access_t access,
-                l1_itlb_entry_t * l1_itlb,
-                l1_dtlb_entry_t * l1_dtlb,
-                l2_tlb_entry_t * l2_tlb,
-                int* hit_or_miss);
+int tlb_search(const void *mem_space,
+               const virt_addr_t *vaddr,
+               phy_addr_t *paddr,
+               mem_access_t access,
+               l1_itlb_entry_t *l1_itlb,
+               l1_dtlb_entry_t *l1_dtlb,
+               l2_tlb_entry_t *l2_tlb,
+               int *hit_or_miss);

@@ -36,7 +36,7 @@ test-tlb_hrchy.o: test-tlb_hrchy.c error.h util.h addr_mng.h addr.h \
  commands.h mem_access.h memory.h tlb_hrchy.h tlb_hrchy_mng.h page_walk.h
 test-tlb_simple.o: test-tlb_simple.c error.h util.h addr_mng.h addr.h commands.h mem_access.h memory.h list.h tlb.h tlb_mng.h
 tlb_hrchy_mng.o: tlb_hrchy_mng.c tlb_hrchy.h tlb_mng.h tlb.h addr.h list.h addr_mng.h error.h \
- page_walk.h 
+ page_walk.h list.h
 tlb_mng.o: tlb_mng.c tlb_mng.h tlb.h addr.h list.h addr_mng.h error.h \
  page_walk.h
 
@@ -44,7 +44,7 @@ test-addr: test-addr.o error.o addr_mng.o
 test-commands: test-commands.o error.o addr_mng.o commands.o 
 test-memory: test-memory.o error.o memory.o page_walk.o addr_mng.o 
 test-tlb_simple: test-tlb_simple.o error.o list.o addr_mng.o memory.o page_walk.o tlb_mng.o commands.o
-test-tlb_hrchy: test-tlb_hrchy.o tlb_hrchy_mng.o error.o addr_mng.o commands.o memory.o page_walk.o
+test-tlb_hrchy: test-tlb_hrchy.o tlb_hrchy_mng.o error.o addr_mng.o commands.o memory.o page_walk.o list.o
 # ----------------------------------------------------------------------
 # This part is to make your life easier. See handouts how to make use of it.
 

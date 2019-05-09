@@ -12,11 +12,12 @@
 #include "addr.h"
 #include "list.h"
 
-typedef struct{
-	list_t* ll;
-	node_t* (*push_back)(list_t* this, const list_content_t* value);
-	void (*move_back)(list_t* this, node_t* node);
-	} replacement_policy_t;
+typedef struct
+{
+    list_t *ll;
+    node_t *(*push_back)(list_t *this, const list_content_t *value);
+    void (*move_back)(list_t *this, node_t *node);
+} replacement_policy_t;
 //=========================================================================
 /**
  * @brief Clean a TLB (invalidate, reset...).
@@ -25,8 +26,8 @@ typedef struct{
  * @param tlb pointer to the TLB
  * @return error code
  */
- 
-int tlb_flush(tlb_entry_t * tlb);
+
+int tlb_flush(tlb_entry_t *tlb);
 
 //=========================================================================
 /**
@@ -40,10 +41,10 @@ int tlb_flush(tlb_entry_t * tlb);
  * @param tlb pointer to the beginning of the tlb
  * @return hit (1) or miss (0)
  */
-int tlb_hit(const virt_addr_t * vaddr,
-            phy_addr_t * paddr,
-            const tlb_entry_t * tlb,
-            replacement_policy_t * replacement_policy);
+int tlb_hit(const virt_addr_t *vaddr,
+            phy_addr_t *paddr,
+            const tlb_entry_t *tlb,
+            replacement_policy_t *replacement_policy);
 
 //=========================================================================
 /**
@@ -55,9 +56,9 @@ int tlb_hit(const virt_addr_t * vaddr,
  * @param tlb pointer to the TLB
  * @return  error code
  */
-int tlb_insert( uint32_t line_index,
-                const tlb_entry_t * tlb_entry,
-                tlb_entry_t * tlb);
+int tlb_insert(uint32_t line_index,
+               const tlb_entry_t *tlb_entry,
+               tlb_entry_t *tlb);
 
 //=========================================================================
 /**
@@ -67,9 +68,9 @@ int tlb_insert( uint32_t line_index,
  * @param tlb_entry pointer to the entry to be initialized
  * @return  error code
  */
-int tlb_entry_init( const virt_addr_t * vaddr,
-                    const phy_addr_t * paddr,
-                    tlb_entry_t * tlb_entry);
+int tlb_entry_init(const virt_addr_t *vaddr,
+                   const phy_addr_t *paddr,
+                   tlb_entry_t *tlb_entry);
 
 //=========================================================================
 /**
@@ -82,9 +83,9 @@ int tlb_entry_init( const virt_addr_t * vaddr,
  * @param hit_or_miss (modified) hit (1) or miss (0)
  * @return error code
  */
-int tlb_search( const void * mem_space,
-                const virt_addr_t * vaddr,
-                phy_addr_t * paddr,
-                tlb_entry_t * tlb,
-                replacement_policy_t * replacement_policy,
-                int* hit_or_miss);
+int tlb_search(const void *mem_space,
+               const virt_addr_t *vaddr,
+               phy_addr_t *paddr,
+               tlb_entry_t *tlb,
+               replacement_policy_t *replacement_policy,
+               int *hit_or_miss);

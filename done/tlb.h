@@ -14,9 +14,9 @@
 
 #define TLB_LINES 128 // the number of entries
 
-typedef struct {
+typedef struct
+{
 	uint64_t tag : VIRT_PAGE_NUM;
 	uint32_t phy_page_num : PHY_PAGE_NUM;
 	uint8_t v : 1;
-	}tlb_entry_t;
- 
+} tlb_entry_t;
