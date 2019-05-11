@@ -7,7 +7,7 @@ static inline pte_t read_page_entry(const pte_t *start,
                                     pte_t page_start,
                                     uint16_t index)
 {
-
+    M_REQUIRE_NON_NULL(start);
     // getting the page entry address from a pointer to memory start
     int i = index + (page_start / sizeof(pte_t));
     return start[i];

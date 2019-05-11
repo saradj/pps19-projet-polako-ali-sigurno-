@@ -154,7 +154,11 @@ int mem_init_from_description(const char *master_filename, void **memory, size_t
     FILE *file;
     file = fopen(master_filename, "rb"); // read binary mode
     M_REQUIRE_NON_NULL_CUSTOM_ERR(file, ERR_IO);
-    fscanf(file, "%zu", mem_capacity_in_bytes); //getting the total bytes to store
+    if (fscanf(file, "%zu", mem_capacity_in_bytes) <= 0) //getting the total bytes to store
+    {
+        fclose(file);
+        return ERR_IO;
+    }
     *memory = malloc(*mem_capacity_in_bytes);
     if (*memory == NULL)
     {
@@ -163,7 +167,12 @@ int mem_init_from_description(const char *master_filename, void **memory, size_t
     }
     error_code ret = ERR_NONE;
     char pgd_filename[MAXSIZE_STRING];
-    fscanf(file, "%s", pgd_filename); //getting the filename string
+    if (fscanf(file, "%s", pgd_filename) != 1)
+    {
+        fclose(file);
+        free(*memory);
+        return ERR_IO;
+    } //getting the filename string
     if (ret = page_file_read(pgd_filename, *memory) != ERR_NONE)
     {
         fclose(file);
@@ -171,12 +180,27 @@ int mem_init_from_description(const char *master_filename, void **memory, size_t
         return ret;
     }
     int num = 0;
-    fscanf(file, "%d", &num); //getting the number of ilnes to read next
+    if (fscanf(file, "%d", &num) != 1)
+    {
+        fclose(file);
+        free(*memory);
+        return ERR_IO;
+    } //getting the number of ilnes to read next
     uint32_t phaddr = 0;
     for (int i = 0; i < num; i++)
     {
-        fscanf(file, "%x" SCNx32, &phaddr); //getting the physical address
-        fscanf(file, "%s", pgd_filename);   // getting the filename where to take the bytes from
+        if (fscanf(file, "%x" SCNx32, &phaddr) != 1)
+        {
+            fclose(file);
+            free(*memory);
+            return ERR_IO;
+        } //getting the physical address
+        if (fscanf(file, "%s", pgd_filename) != 1)
+        {
+            fclose(file);
+            free(*memory);
+            return ERR_IO;
+        } // getting the filename where to take the bytes from
 
         if (ret = page_file_read(pgd_filename, ((uint8_t *)(*memory) + phaddr)) != ERR_NONE)
         {
@@ -191,16 +215,29 @@ int mem_init_from_description(const char *master_filename, void **memory, size_t
     init_phy_addr(&paddr, 0, 0); //initializing the physical address
     virt_addr_t virtaddr;
     init_virt_addr64(&virtaddr, 0); //initializing the virtual address
-    while (fscanf(file, "%lx" SCNx64, &vadd) != EOF)
-    { //getting the virtual address and string untill the end
+    int n = 0;
+    while (n = fscanf(file, "%lx" SCNx64, &vadd) != EOF)
+    {
+        if (n != 1)
+        {
+            fclose(file);
+            free(*memory);
+            return ERR_IO;
+        }
+        //getting the virtual address and string untill the end
         init_virt_addr64(&virtaddr, vadd);
         if (ret = page_walk(*memory, &virtaddr, &paddr) != ERR_NONE)
         {
             fclose(file);
             free(*memory);
             return ret;
-        }                                                                        //getting the physical address from virtual address
-        fscanf(file, "%s", pgd_filename);                                        // getting the filename where to take the bytes from
+        } //getting the physical address from virtual address
+        if (1 != fscanf(file, "%s", pgd_filename))
+        {
+            fclose(file);
+            free(*memory);
+            return ERR_IO;
+        }                                                                        // getting the filename where to take the bytes from
         uint32_t numM = (paddr.phy_page_num) << PAGE_OFFSET | paddr.page_offset; //getting the physical address from the struct
         if (ret = page_file_read(pgd_filename, ((uint8_t *)(*memory) + numM)) != ERR_NONE)
         {

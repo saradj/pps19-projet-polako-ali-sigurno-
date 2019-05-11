@@ -30,12 +30,12 @@ int init_virt_addr(virt_addr_t * vaddr,   uint16_t pgd_entry, uint16_t pud_entry
  vaddr->pmd_entry= pmd_entry;
  vaddr->pte_entry=pte_entry;
  vaddr->page_offset=page_offset;
- 
+ vaddr->reserved=0;
  return ERR_NONE;
 }
 
 int init_virt_addr64(virt_addr_t * vaddr, uint64_t vaddr64){
-//M_REQUIRE_NON_NULL(vaddr);
+M_REQUIRE_NON_NULL(vaddr);
 //assigning entries from the given virtual address
 //to their respective bitfields into virtual address vaddr
 
@@ -53,13 +53,12 @@ M_REQUIRE_NON_NULL(vaddr);
 //shifitng vaddr to the right by offset_size 
 //equivalent to starting with pte entry followed by 
 //pmd, pud,pgd
-uint16_t pte = vaddr->pte_entry;
-uint16_t pmd = vaddr->pmd_entry;
-uint16_t pud = vaddr->pud_entry;
-uint16_t pgd = vaddr->pgd_entry;
-uint64_t r = pte | (pmd<<ENTRY_SIZE)|(pud<<ENTRY_SIZE*2)|(pgd<<ENTRY_SIZE*3);
+uint16_t pte = vaddr->pte_entry&MASK_ENTRY;
+uint16_t pmd = vaddr->pmd_entry&MASK_ENTRY;
+uint16_t pud = vaddr->pud_entry&MASK_ENTRY;
+uint16_t pgd = vaddr->pgd_entry&MASK_ENTRY;
+uint64_t r = 0l| pte | (pmd<<ENTRY_SIZE)|(pud<<ENTRY_SIZE*2)|(pgd<<ENTRY_SIZE*3);
 return r;
-
 }
 
 uint64_t virt_addr_t_to_uint64_t(const virt_addr_t * vaddr){ // creating a 64 bits address from virtual addr struct
