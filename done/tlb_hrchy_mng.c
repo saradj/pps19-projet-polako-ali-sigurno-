@@ -220,8 +220,8 @@ int tlb_search(const void *mem_space,
 
     M_EXIT_IF_ERR(page_walk(mem_space, vaddr, paddr), "while calling page walk");
     l2_tlb_entry_t entry;
-    M_EXIT_IF_ERR(tlb_entry_init(vaddr, paddr, &entry, L2_TLB), "while initialising tlb entry"); // initialise a level 2 tlb entry
-    line_index = vpg_num % L2_TLB_LINES; // getting the right index in l2
+    M_EXIT_IF_ERR(tlb_entry_init(vaddr, paddr, &entry, L2_TLB), "while initialising tlb entry");           // initialise a level 2 tlb entry
+    line_index = vpg_num % L2_TLB_LINES;                                                                   // getting the right index in l2
     M_EXIT_IF_ERR(tlb_insert(line_index, &entry, l2_tlb, L2_TLB);, "while inserting the tlb entry in L2"); // insert it
     if (access == INSTRUCTION)
     {
@@ -229,7 +229,8 @@ int tlb_search(const void *mem_space,
         l1_itlb_entry_t ientry;
         M_EXIT_IF_ERR(tlb_entry_init(vaddr, paddr, &ientry, L1_ITLB), "while initialising tlb entry");
         M_EXIT_IF_ERR(tlb_insert(line_index, &ientry, l1_itlb, L1_ITLB);, "while inserting the tlb entry in L1 I"); // inserting the data in the tlb l1 according to the access
-        l1_dtlb[line_index].v = 0;                                                                                  // de-validate the other l1 tlb entry at that index
+        for (list_content_t i = 0; i < L1_ITLB_LINES; i++)
+            l1_dtlb[line_index].v = 0; // de-validate the other l1 tlb entry at that index
     }
     else
     {
