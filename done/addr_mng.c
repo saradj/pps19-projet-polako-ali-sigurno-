@@ -27,7 +27,7 @@ int init_virt_addr(virt_addr_t *vaddr,
                    uint16_t pte_entry, uint16_t page_offset)
 { //assigning the given entries to their
   //respective bitfields into virtual address vaddr
-  // M_REQUIRE_NON_NULL(vaddr);
+  
   M_REQUIRE_NON_NULL(vaddr);
   M_REQUIRE(page_offset <= MASK_OFFSET, ERR_BAD_PARAMETER, "Input value  should be 12 bits bu is %lu bits", page_offset);
   M_REQUIRE(pte_entry <= MASK_ENTRY, ERR_BAD_PARAMETER, "Input value  should be 9 bits bu is %lu bits", pte_entry);

@@ -223,8 +223,7 @@ int mem_init_from_description(const char *master_filename, void **memory, size_t
             fclose(file);
             free(*memory);
             return ERR_IO;
-        }
-        //getting the virtual address and string untill the end
+        }//getting the virtual address and string untill the end
         init_virt_addr64(&virtaddr, vadd);
         if (ret = page_walk(*memory, &virtaddr, &paddr) != ERR_NONE)
         {

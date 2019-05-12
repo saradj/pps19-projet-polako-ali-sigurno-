@@ -220,8 +220,16 @@ int tlb_search(const void *mem_space,
 
     M_EXIT_IF_ERR(page_walk(mem_space, vaddr, paddr), "while calling page walk");
     l2_tlb_entry_t entry;
-    M_EXIT_IF_ERR(tlb_entry_init(vaddr, paddr, &entry, L2_TLB), "while initialising tlb entry");           // initialise a level 2 tlb entry
-    line_index = vpg_num % L2_TLB_LINES;                                                                   // getting the right index in l2
+    M_EXIT_IF_ERR(tlb_entry_init(vaddr, paddr, &entry, L2_TLB), "while initialising tlb entry"); // initialise a level 2 tlb entry
+    line_index = vpg_num % L2_TLB_LINES;
+    int isValid = 0;
+    uint32_t tag = 0;
+    if (l2_tlb[line_index].v == 1)// if there was an entry before in l2 
+    {
+        isValid = 1;
+        tag = l2_tlb[line_index].tag << 2;
+        tag = tag | (line_index >> 4);                                                                     // 32 bit tag = (30 bit tag from l2 & 2 first bits of line index of l2)
+    }                                                                                                      // getting the right index in l2
     M_EXIT_IF_ERR(tlb_insert(line_index, &entry, l2_tlb, L2_TLB);, "while inserting the tlb entry in L2"); // insert it
     if (access == INSTRUCTION)
     {
@@ -229,8 +237,8 @@ int tlb_search(const void *mem_space,
         l1_itlb_entry_t ientry;
         M_EXIT_IF_ERR(tlb_entry_init(vaddr, paddr, &ientry, L1_ITLB), "while initialising tlb entry");
         M_EXIT_IF_ERR(tlb_insert(line_index, &ientry, l1_itlb, L1_ITLB);, "while inserting the tlb entry in L1 I"); // inserting the data in the tlb l1 according to the access
-        for (list_content_t i = 0; i < L1_ITLB_LINES; i++)
-            l1_dtlb[line_index].v = 0; // de-validate the other l1 tlb entry at that index
+        if (isValid == 1 && l1_dtlb[line_index].tag == tag)
+            l1_dtlb[line_index].v = 0; // de-validate the other l1 tlb entry at that index if it was valid and it's tag was=l2 tag
     }
     else
     {
@@ -238,7 +246,8 @@ int tlb_search(const void *mem_space,
         l1_dtlb_entry_t d_entry;
         M_EXIT_IF_ERR(tlb_entry_init(vaddr, paddr, &d_entry, L1_DTLB), "while initialising tlb entry");
         M_EXIT_IF_ERR(tlb_insert(line_index, &d_entry, l1_dtlb, L1_DTLB);, "while inserting the tlb data entry in L1");
-        l1_itlb[line_index].v = 0; // de-validate the other l1 tlb entry at that index
+        if (isValid == 1 && l1_itlb[line_index].tag == tag)
+            l1_itlb[line_index].v = 0; // de-validate the other l1 tlb entry at that index if it was valid and it's tag was=l2 tag
     }
     return ERR_NONE;
 }
