@@ -1,0 +1,108 @@
+- id: group_3a8237
+- Makefile: 3           # max 3, 
+- addr.h: # NE PAS REMPLIR CETTE LIGNE
+    trois typedef: 3   # max 3,
+    virt_addr_t: 5     # max 5,
+    phy_addr_t: 5     # max 5, 
+- addr_mng.c: # NE PAS REMPLIR CETTE LIGNE
+  - init_virt_addr(): 5.5                     # max 6, pas de verification de page_offset inferieur a page size (-0.5)
+  - init_virt_addr64(): 6                     # max 6, 
+  - init_phy_addr(): 3                        # max 4, verification d'arguments manquantes (page_offset inferieur a page size et page_begin aligné avec la taille d'une page)(-1)
+  - virt_addr_t_to_uint64_t(): 5              # max 5, 
+  - virt_addr_t_to_virtual_page_number(): 5   # max 5,
+  - print_virtual_address(): 3                # max 3, 
+  - print_physical_address(): 3               # max 3, 
+- commands.h: # NE PAS REMPLIR CETTE LIGNE
+    command_word_t: 2   # max 2, 
+    command_t: 7        # max 7, 
+    program_t: 5        # max 5, 
+- commands.c: # NE PAS REMPLIR CETTE LIGNE
+  - program_print(): 7       # max 7,
+  - program_init(): 5.5          # max 6, sortie non propre, si l'allocation echoue allocated doit être mis à zero (-0.5)
+  - program_add_command(): 13  # max 16, limitation à 100 lignes superflu (-1), si read, write_data doit être zero (-1), si write il faut verifier la taille de write_data (-1), il serait preferable d'utiliser ERR_BAD_PARAMETER si un parametre est incorrecte
+  - program_shrink(): 5        # max 6, modification si le realloc echoue (-1) 
+  - program_read(): # NE PAS REMPLIR CETTE LIGNE
+      modularisation: 5              # max 5, 
+      get_next_nonspace_char(): 3    # max 3, 
+      do_D(): 8                      # max 8, 
+      do_R(): 8                      # max 8, 
+      do_W(): 8                      # max 8, 
+      command_line_read(): 10        # max 10, 
+      core: 11                       # max 11,
+  - program_free(): 6                # max 6, 
+- memory.c: # NE PAS REMPLIR CETTE LIGNE
+  - mem_init_from_dumpfile(): # NE PAS REMPLIR CETTE LIGNE
+      vérifications d\'usage: 2   # max 2,
+      ouverture fichier: 5        # max 5, 
+      allocation mémoire: 5       # max 5,
+      lecture fichier: 5          # max 5, 
+      fermeture fichier: 2        # max 2,
+  - mem_init_from_description(): # NE PAS REMPLIR CETTE LIGNE
+      vérifications d\'usage: 2     # max 2,
+      ouverture fichier: 5          # max 5, 
+      allocation mémoire: 5         # max 5, 
+      lecture PGD page filename: 5  # max 5, 
+      page_file_read(): 8           # max 8,
+      lecture PUDs:  12.5           # max 15, pas de verification des retourn des scanf (-0.5), verification des retours de fonctions (-2)
+      lecture pages data:  13       # max 15, pas de verification des retours de fonctions (-2)
+      fermeture fichier: 2          # max 2, 
+- page_walk.c: # NE PAS REMPLIR CETTE LIGNE
+    read_page_entry(): 2    # max 2, 
+    page_walk(): 10         # max 12, pas de verification des retour de read_page_entry (-2)
+- list.c: # NE PAS REMPLIR CETTE LIGNE
+    - is_empty_list: 5         # max 7.5, cas de liste nul incorrect (-2.5)
+    - init_list:  7.5            # max 7.5, 
+    - clear_list: 10           # max 10, 
+    - push_back: # NE PAS REMPLIR CETTE LIGNE
+        new node: 7.5            # max 7.5, 
+        insert after: 7.5        # max 7.5, 
+        main part: 5           # max 5, 
+    - push_front: # NE PAS REMPLIR CETTE LIGNE
+        insert before: 7.5       # max 7.5, 
+        main part: 5           # max 5, 
+    - pop_back: # NE PAS REMPLIR CETTE LIGNE
+        remove node: 7.5        # max 7.5, 
+        main part: 7.5          # max 7.5, 
+    - pop_front: 7.5          # max 7.5, 
+    - move_back:  12            # max 15,  alloc/free de memoire superflu (-3)
+    - print_list: 6.5           # max 7.5,  si erreur retourne pas le nombre de nombre de charactères imprimé comme demandé (-1)
+    - print_reverse_list: 2    # max 3, si erreur retourne pas le nombre de nombre de charactères imprimé comme demandé (-1)
+    - modularisation: 0        # max 7.5, pas present
+- tlb_mng.h: 7              # max 7, 
+- tlb.h: 5                  # max 5, 
+- tlb_mng.c: # NE PAS REMPLIR CETTE LIGNE
+    - tlb_entry_init(): 7.5    # max 7.5, 
+    - tlb_flush(): 7.5         # max 7.5, pourquoi juste pas memset ?
+    - tlb_insert(): 7        # max 7.5, ERR_BAD_PARAMETER attendu si un parametre est invalide (-0.5)
+    - tlb_hit(): 20           # max 20, 
+    - tlb_search(): # NE PAS REMPLIR CETTE LIGNE
+        vérifications: 5    # max 5, 
+        hit: 2.5              # max 2.5, 
+        page_walker: 2.5      # max 2.5, 
+        new entry: 10       # max 10, 
+- tlb_hrchy.h:  13        # max 13, 
+- tlb_hrchy_mng.c: # NE PAS REMPLIR CETTE LIGNE
+    - tlb_entry_init(): # NE PAS REMPLIR CETTE LIGNE
+        macros: 0           # max 5, pas de macros
+        vérifications: 2    # max 2, 
+        coeur: 6            # max 7.5, switch case (le else garantis pas que ce soit un L2_TLB) (-1.5)
+    - tlb_flush(): 4      # max 7.5,  switch case (-1.5), duplication de code (pourquoi pas tout memset?) (-2)
+    - tlb_insert(): # NE PAS REMPLIR CETTE LIGNE
+        macros: 0           # max 3, pas de macros
+        vérifications: 2    # max 2, 
+        coeur: 6.5            # max 7.5, cas default devrait retourner une erreur (-1)
+    - tlb_hit(): # NE PAS REMPLIR CETTE LIGNE
+        macros: 0           # max 6, pas de macros
+        vérifications: 3    # max 3, 
+        coeur: 12           # max 15, il faut des break entre vos switch/case (-3)
+    - tlb_search(): # NE PAS REMPLIR CETTE LIGNE
+        macros: 0                    # max 9, pas de macros
+        vérifications: 7             # max 8, verification de "access" (-1)
+        hits: 6                      # max 6, 
+        L2 vers L1: 8                # max 8,
+        page_walker: 3               # max 3, 
+        new L2 entry: 6.5              # max 7.5, non utilisation de tlb_entry_init/ duplication de code (-1)
+        insert in L1: 7.5              # max 7.5, 
+        eviction in other L1: 14      # max 15, magic numbers (-1)
+- style: 0       # max 2, min -2, indentation etrange par moments
+- bonus/malus: 0 # max 5, min -5, 
