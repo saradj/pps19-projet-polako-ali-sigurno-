@@ -101,7 +101,7 @@ int cache_entry_init(const void *mem_space,
     ((type *)cache_entry)->age = 0;                             \
     uint32_t off = phaddr % LINES;                              \
     uint32_t index = ((phaddr >> off) << off) / sizeof(word_t); \
-    for (size_t i = 0; i < 4; ++i)                              \
+    for (size_t i = 0; i < L1_DCACHE_WORDS_PER_LINE; ++i)       \
         ((type *)cache_entry)->line[index + i] = ((word_t *)mem_space)[phaddr + i];
 
     M_REQUIRE_NON_NULL(mem_space);
@@ -158,6 +158,7 @@ int cache_flush(void *cache, cache_t cache_type)
     }
     return ERR_NONE;
 }
+
 int cache_insert(uint16_t cache_line_index,
                  uint8_t cache_way,
                  const void *cache_line_in,
@@ -209,18 +210,14 @@ int cache_hit(const void *mem_space,
     M_REQUIRE_NON_NULL(paddr);
     M_REQUIRE_NON_NULL(hit_index);
     M_REQUIRE_NON_NULL(hit_way);
-    uint8_t coldStart = 0;
+
     uint32_t phaddr = getPhaddr(paddr);
 #define hit(TYPE, WORDS_PER_LINE, LINES, REMAINING_BITS, WAYS)             \
     uint32_t index = (phaddr / (WORDS_PER_LINE * sizeof(word_t))) % LINES; \
     uint32_t tag = phaddr >> REMAINING_BITS;                               \
     foreach_way(way, WAYS)                                                 \
     {                                                                      \
-        if (cache_valid(TYPE, WAYS, index, way) == 0)                      \
-        {                                                                  \
-            coldStart = 1;                                                 \
-        }                                                                  \
-        else if (cache_tag(TYPE, WAYS, index, way) == tag)                 \
+        if (cache_tag(TYPE, WAYS, index, way) == tag)                      \
         {                                                                  \
             *hit_way = way;                                                \
             *hit_index = index;                                            \
@@ -229,10 +226,10 @@ int cache_hit(const void *mem_space,
             LRU_age_update(TYPE, WAYS, way, index);                        \
             return ERR_NONE;                                               \
         }                                                                  \
-        *hit_way = HIT_WAY_MISS;                                           \
-        *hit_index = HIT_INDEX_MISS;                                       \
-        return ERR_NONE;                                                   \
-    }
+    }                                                                      \
+    *hit_way = HIT_WAY_MISS;                                               \
+    *hit_index = HIT_INDEX_MISS;                                           \
+    return ERR_NONE;
 
     switch (cache_type)
     {
@@ -264,7 +261,7 @@ int cache_hit(const void *mem_space,
 #define findPlace(CACHE_TYPE, TYPE, WAYS)                                    \
     foreach_way(way, WAYS) if (cache_valid(TYPE, WAYS, hit_index, way) == 0) \
     {                                                                        \
-        cache_insert(hit_index, way, line_toinsert, cache, CACHE_TYPE);      \
+        cache_insert(hit_index, way, entry_toinsert, cache, CACHE_TYPE);      \
         LRU_age_increase(TYPE, WAYS, hit_way, hit_index);                    \
         return ERR_NONE;                                                     \
     }
@@ -280,27 +277,32 @@ int cache_hit(const void *mem_space,
             evicted = cache_line(TYPE, WAYS, hit_index, way);          \
         }                                                              \
     }                                                                  \
-    cache_insert(hit_index, way_to, line_toinsert, cache, CACHE_TYPE); \
+    cache_insert(hit_index, way_to, entry_toinsert, cache, CACHE_TYPE); \
     LRU_age_update(TYPE, WAYS, way_to, hit_index);
 // END OF EVICT
 
-#define moveL1_to_L2(L1TYPE, WAYS)                        \
+#define moveL1_to_L2(L1TYPE, WAYS, type)                        \
     uint8_t max_age = 0;                                  \
     uint8_t way_to = 0;                                   \
-    const uint32_t *evicted = NULL;                       \
-    evict(l1_icache_entry_t, WAYS, L1TYPE);               \
-    line_toinsert = evicted;                              \
-    cache = l2_cache;                                     \
-    findPlace(L2_CACHE, l2_cache_entry_t, L2_CACHE_WAYS); \
-    evict(l2_cache_entry_t, L2_CACHE_WAYS, L2_CACHE);
+    const word_t *evicted = NULL;                       \
+    evict(type, WAYS, L1TYPE);               \
+      cache = l2_cache;                                     \
+      entry_toinsert->line = evicted;\
+    findPlace(L2_CACHE, type, L2_CACHE_WAYS); \
+    evict(type, L2_CACHE_WAYS, L2_CACHE);\
+    return ERR_NONE;
 
-#define moveL2_to_L1(L1TYPE, WAYS, REMAINING_BITS)                                                       \
-        ((l2_cache_entry_t *)l2_cache + (hit_index) * (L2_CACHE_WAYS) + (hit_way))->v =0; \
-    uint32_t tag = phaddr >> REMAINING_BITS;                                                                  \
-                                                                                       \
-    const uint32_t *line_toinsert = p_line;                                                                   \
-    findPlace(L1TYPE, l1_icache_entry_t, WAYS);                                                               \
-    moveL1_to_L2(L1TYPE, WAYS)
+#define moveL2_to_L1(L1TYPE, WAYS, REMAINING_BITS, type)     \
+    ((l2_cache_entry_t *)l2_cache + (hit_index) * (L2_CACHE_WAYS) + (hit_way))->v = 0; \
+      ((l2_cache_entry_t *)l2_cache + (hit_index) * (L2_CACHE_WAYS) + (hit_way))->line;  \
+    uint32_t tag = phaddr >> REMAINING_BITS;                                           \
+  type * entry_toinsert; \
+  entry_toinsert->line = p_line;\
+  entry_toinsert->v=1;\
+  entry_toinsert->age=0;\
+entry_toinsert->tag=tag;\
+    findPlace(L1TYPE, type, WAYS);                                        \
+    moveL1_to_L2(L1TYPE, WAYS, type)
 
 int cache_read(const void *mem_space,
                phy_addr_t *paddr,
@@ -318,11 +320,11 @@ int cache_read(const void *mem_space,
     M_REQUIRE_NON_NULL(word);
     uint32_t phaddr = getPhaddr(paddr);
     M_REQUIRE((phaddr << 30) == 0, ERR_BAD_PARAMETER, "physical address %d not word aligned", phaddr);
-    const uint32_t *p_line = NULL;
+    const word_t *p_line = NULL;
     uint8_t hit_way = 0;
     uint16_t hit_index = 0;
     uint32_t word_index = (phaddr << 28) >> 30;
- void * cache = l1_cache;
+    void *cache = l1_cache;
     switch (access)
     {
     case INSTRUCTION:
@@ -331,17 +333,39 @@ int cache_read(const void *mem_space,
         M_EXIT_IF_ERR(cache_hit(mem_space, l2_cache, paddr, &p_line, &hit_way, &hit_index, L2_CACHE), "calling cache hit on l1 instruction");
         if (hit_way != HIT_WAY_MISS)
         {
-           
-           moveL2_to_L1(L1_ICACHE, L1_ICACHE_WAYS, L1_ICACHE_TAG_REMAINING_BITS);      }
+            moveL2_to_L1(L1_ICACHE, L1_ICACHE_WAYS, L1_ICACHE_TAG_REMAINING_BITS, l1_icache_entry_t);
+        }
+ l1_icache_entry_t inst_entry;
+    cache_entry_init(mem_space, paddr, &inst_entry, L1_ICACHE);
+
+
+      entry_toinsert->line = inst_entry.line;
+  entry_toinsert->v=1;
+  entry_toinsert->age=0;
+entry_toinsert->tag= phaddr >> L1_ICACHE_TAG_REMAINING_BITS;  
+    void *cache = l1_cache;
+    findPlace(L1_ICACHE, l1_icache_entry_t, L1_ICACHE_WAYS)
+        moveL1_to_L2(L1_ICACHE, L1_ICACHE_WAYS, l1_icache_entry_t);
     }
     break;
     case DATA:
     {
         l1_search(L1_DCACHE);
-    M_EXIT_IF_ERR(cache_hit(mem_space, l2_cache, paddr, &p_line, &hit_way, &hit_index, L2_CACHE), "calling cache hit on l1 instruction");
+        M_EXIT_IF_ERR(cache_hit(mem_space, l2_cache, paddr, &p_line, &hit_way, &hit_index, L2_CACHE), "calling cache hit on l1 instruction");
         if (hit_way != HIT_WAY_MISS)
         {
-           moveL2_to_L1(L1_DCACHE, L1_DCACHE_WAYS, L1_DCACHE_TAG_REMAINING_BITS);      }
+            moveL2_to_L1(L1_DCACHE, L1_DCACHE_WAYS, L1_DCACHE_TAG_REMAINING_BITS,l1_dcache_entry_t);
+        }
+         l1_dcache_entry_t data_entry;
+    cache_entry_init(mem_space, paddr, &data_entry, L1_DCACHE);
+entry_toinsert->line = data_entry.line;
+  entry_toinsert->v=1;
+  entry_toinsert->age=0;
+entry_toinsert->tag= phaddr >> L1_DCACHE_TAG_REMAINING_BITS;  
+
+    void *cache = l1_cache;
+    findPlace(L1_DCACHE, l1_dcache_entry_t, L1_DCACHE_WAYS)
+        moveL1_to_L2(L1_DCACHE, L1_DCACHE_WAYS, l1_dcache_entry_t);
     }
     break;
     }
@@ -386,38 +410,48 @@ int cache_write(void *mem_space,
     M_REQUIRE_NON_NULL(word);
     uint32_t phaddr = getPhaddr(paddr);
     M_REQUIRE((phaddr << 30) == 0, ERR_BAD_PARAMETER, "physical address %d not word aligned", phaddr);
-     uint32_t *p_line = NULL;
+    uint32_t *p_line = NULL;
     uint8_t hit_way = 0;
     uint16_t hit_index = 0;
     uint32_t word_index = (phaddr << 28) >> 30;
-#define read_mod_ins(cachet, CACHE_TYPE, WAYS, type, WORDS_PER_LINE,REMAINING_BITS)                                                    \
+#define read_mod_ins(cachet, CACHE_TYPE, WAYS, type, WORDS_PER_LINE, REMAINING_BITS)                                    \
     M_EXIT_IF_ERR(cache_hit(mem_space, cachet, paddr, &p_line, &hit_way, &hit_index, CACHE_TYPE), "while calling hit"); \
-    if (hit_way != HIT_WAY_MISS)                                                                                       \
-    {                                                                                                                  \
-        p_line[word_index] = *word;                                                                                    \
-        cache_insert(hit_index, hit_way, p_line, cachet, CACHE_TYPE);  \
-        void * cache = cachet;                                                 \
-        LRU_age_update(type, WAYS, hit_way, hit_index);                                                                \
-        for (size_t i = 0; i < WORDS_PER_LINE; ++i)                                                                    \
-            ((word_t *)mem_space)[phaddr + i] = p_line[i];                                                             \
-        if (CACHE_TYPE == L2_CACHE)                                                                                    \
-             moveL2_to_L1(CACHE_TYPE, WAYS, REMAINING_BITS);  \
-             return ERR_NONE;    \
+    if (hit_way != HIT_WAY_MISS)                                                                                        \
+    {                                                                                                                   \
+        p_line[word_index] = *word;                                                                                     \
+       (type *) entry_toinsert; \
+  entry_toinsert->line = p_line;\
+  entry_toinsert->v=1;\
+  entry_toinsert->age=0;\
+entry_toinsert->tag= phaddr >> REMAINING_BITS;  ;\
+        cache_insert(hit_index, hit_way, entry_toinsert, cachet, CACHE_TYPE);                                                   \
+        void *cache = cachet;                                                                                           \
+        LRU_age_update(type, WAYS, hit_way, hit_index);                                                                 \
+        for (size_t i = 0; i < WORDS_PER_LINE; ++i)                                                                     \
+            ((word_t *)mem_space)[phaddr + i] = p_line[i];                                                              \
+        if (CACHE_TYPE == L2_CACHE)                                                                                     \
+            moveL2_to_L1(CACHE_TYPE, WAYS, REMAINING_BITS, l1_dcache_entry_t);                                                             \
+        return ERR_NONE;                                                                                                \
     }
 
     read_mod_ins(l1_cache, L1_DCACHE, L1_DCACHE_WAYS, l1_dcache_entry_t, L1_DCACHE_WORDS_PER_LINE, L1_DCACHE_TAG_REMAINING_BITS);
     read_mod_ins(l2_cache, L2_CACHE, L2_CACHE_WAYS, l2_cache_entry_t, L2_CACHE_WORDS_PER_LINE, L1_DCACHE_TAG_REMAINING_BITS);
     l1_dcache_entry_t data_entry;
     cache_entry_init(mem_space, paddr, &data_entry, L1_DCACHE);
+(l1_dcache_entry_t *) entry_toinsert; 
 
     data_entry.line[word_index] = *word;
     for (size_t i = 0; i < L1_DCACHE_WORDS_PER_LINE; ++i)
         ((word_t *)mem_space)[phaddr + i] = data_entry.line[i];
 
-    const uint32_t *line_toinsert = data_entry.line;
-    void * cache = l1_cache;
+  entry_toinsert->line = data_entry.line;
+  entry_toinsert->v=1;
+  entry_toinsert->age=0;
+entry_toinsert->tag= phaddr >> L1_DCACHE_TAG_REMAINING_BITS;  
+    void *cache = l1_cache;
+    
     findPlace(L1_DCACHE, l1_dcache_entry_t, L1_DCACHE_WAYS)
-    moveL1_to_L2(L1_DCACHE, L1_DCACHE_WAYS);
+        moveL1_to_L2(L1_DCACHE, L1_DCACHE_WAYS, l1_dcache_entry_t);
     return ERR_NONE;
 }
 
@@ -427,7 +461,7 @@ int cache_write_byte(void *mem_space,
                      void *l2_cache,
                      uint8_t p_byte,
                      cache_replace_t replace)
-{   
+{
 
     M_REQUIRE_NON_NULL(mem_space);
     M_REQUIRE_NON_NULL(l1_cache);
@@ -439,10 +473,10 @@ int cache_write_byte(void *mem_space,
     phy_addr_t p_paddr;
     p_paddr.phy_page_num = paddr->phy_page_num;
     p_paddr.page_offset = ((paddr->page_offset >> 2) << 2);
-    M_EXIT_IF_ERR( cache_read(mem_space, &p_paddr, DATA, l1_cache, l2_cache, &word, replace), "CALLING read") ;
-    uint32_t mask = ~(0x3<<byteIndex);
-    uint32_t modified = p_byte<<byteIndex;
-    word = (word & mask)|modified;
-    M_EXIT_IF_ERR(cache_write(mem_space, &p_paddr,l1_cache,l2_cache, &word, replace), "CALLING WRITE") ;
+    M_EXIT_IF_ERR(cache_read(mem_space, &p_paddr, DATA, l1_cache, l2_cache, &word, replace), "CALLING read");
+    uint32_t mask = ~(0x3 << byteIndex);
+    uint32_t modified = p_byte << byteIndex;
+    word = (word & mask) | modified;
+    M_EXIT_IF_ERR(cache_write(mem_space, &p_paddr, l1_cache, l2_cache, &word, replace), "CALLING WRITE");
     return ERR_NONE;
 }
