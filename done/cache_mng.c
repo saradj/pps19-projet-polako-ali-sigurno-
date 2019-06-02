@@ -262,7 +262,7 @@ int cache_hit(const void *mem_space,
     foreach_way(way, WAYS) \
     if (cache_valid(TYPE, WAYS, hit_index, way) == 0) \
     {                                                                        \
-        cache_insert(hit_index, way, entry_toinsert, cache, CACHE_TYPE);      \
+        cache_insert(hit_index, way, &entry_toinsert, cache, CACHE_TYPE);      \
         LRU_age_increase(TYPE, WAYS, hit_way, hit_index);                    \
         return ERR_NONE;                                                     \
     }
@@ -279,7 +279,7 @@ int cache_hit(const void *mem_space,
             evicted = cache_line(TYPE, WAYS, hit_index, way);          \
         }                                                              \
     }                                                                  \
-    cache_insert(hit_index, way_to, entry_toinsert, cache, CACHE_TYPE); \
+    cache_insert(hit_index, way_to, &entry_toinsert, cache, CACHE_TYPE); \
     LRU_age_update(TYPE, WAYS, way_to, hit_index);
 // END OF EVICT
 
@@ -291,8 +291,8 @@ int cache_hit(const void *mem_space,
     evict(type, WAYS, L1TYPE);               \
       cache = l2_cache;                                     \
      for(size_t i=0;i<L1_DCACHE_WORDS_PER_LINE; ++i)\
-      entry_toinsert->line[i] = evicted[i];\
-  entry_toinsert->tag= phaddr>>L2_CACHE_TAG_REMAINING_BITS;\
+      entry_toinsert.line[i] = evicted[i];\
+  entry_toinsert.tag= phaddr>>L2_CACHE_TAG_REMAINING_BITS;\
     hit_index=saved_index;\
     findPlace(L2_CACHE, l2_cache_entry_t, L2_CACHE_WAYS); \
   evict(l2_cache_entry_t, L2_CACHE_WAYS, L2_CACHE);\
@@ -302,10 +302,10 @@ int cache_hit(const void *mem_space,
     cache_valid(l2_cache_entry_t,L2_CACHE_WAYS, hit_index, hit_way)=0; \
     uint32_t tag = phaddr >> REMAINING_BITS;                                           \
  for(size_t i=0;i<L1_DCACHE_WORDS_PER_LINE; ++i)\
-      entry_toinsert->line[i] =  cache_line(l2_cache_entry_t,L2_CACHE_WAYS, hit_index, hit_way)[i];\
-  entry_toinsert->v=1;\
-  entry_toinsert->age=0;\
-entry_toinsert->tag=tag;\
+      entry_toinsert.line[i] =  cache_line(l2_cache_entry_t,L2_CACHE_WAYS, hit_index, hit_way)[i];\
+  entry_toinsert.v=1;\
+  entry_toinsert.age=0;\
+entry_toinsert.tag=tag;\
   hit_index= (saved_index<<L1_ICACHE_TAG_REMAINING_BITS)>>L1_ICACHE_TAG_REMAINING_BITS;\
     cache=l1_cache;\
     findPlace(L1TYPE, type, WAYS);                                        \
@@ -336,7 +336,7 @@ int cache_read(const void *mem_space,
     {
     case INSTRUCTION:
     {
-        l1_icache_entry_t * entry_toinsert;
+        l1_icache_entry_t  entry_toinsert;
         l1_search(L1_ICACHE); // eighter returns ERR_NONE OR is was a miss
         M_EXIT_IF_ERR(cache_hit(mem_space, l2_cache, paddr, &p_line, &hit_way, &hit_index, L2_CACHE), "calling cache hit on l2");
         if (hit_way != HIT_WAY_MISS)
@@ -349,11 +349,11 @@ int cache_read(const void *mem_space,
     cache_entry_init(mem_space, paddr, &inst_entry, L1_ICACHE);
 
  for(size_t i=0;i<L1_DCACHE_WORDS_PER_LINE; ++i)
-      entry_toinsert->line[i] = inst_entry.line[i];
+      entry_toinsert.line[i] = inst_entry.line[i];
   
-  entry_toinsert->v=1;
-  entry_toinsert->age=0;
-entry_toinsert->tag= phaddr >> L1_ICACHE_TAG_REMAINING_BITS;  
+  entry_toinsert.v=1;
+  entry_toinsert.age=0;
+entry_toinsert.tag= phaddr >> L1_ICACHE_TAG_REMAINING_BITS;  
     cache = l1_cache;
     hit_index=saved_index>>L1_DCACHE_TAG_BITS;
     findPlace(L1_ICACHE, l1_icache_entry_t, L1_ICACHE_WAYS);
@@ -362,7 +362,7 @@ entry_toinsert->tag= phaddr >> L1_ICACHE_TAG_REMAINING_BITS;
     break;
     case DATA:
     {
-         l1_dcache_entry_t * entry_toinsert;
+         l1_dcache_entry_t  entry_toinsert;
         l1_search(L1_DCACHE);
         M_EXIT_IF_ERR(cache_hit(mem_space, l2_cache, paddr, &p_line, &hit_way, &hit_index, L2_CACHE), "calling cache hit on l1 instruction");
         if (hit_way != HIT_WAY_MISS)
@@ -373,10 +373,10 @@ entry_toinsert->tag= phaddr >> L1_ICACHE_TAG_REMAINING_BITS;
          l1_dcache_entry_t data_entry;
     cache_entry_init(mem_space, paddr, &data_entry, L1_DCACHE);
 for(size_t i=0;i<L1_DCACHE_WORDS_PER_LINE; ++i)
-      entry_toinsert->line[i] =data_entry.line[i];
-  entry_toinsert->v=1;
-  entry_toinsert->age=0;
-entry_toinsert->tag= phaddr >> L1_DCACHE_TAG_REMAINING_BITS;  
+      entry_toinsert.line[i] =data_entry.line[i];
+  entry_toinsert.v=1;
+  entry_toinsert.age=0;
+entry_toinsert.tag= phaddr >> L1_DCACHE_TAG_REMAINING_BITS;  
 hit_index= (saved_index<<L1_ICACHE_TAG_REMAINING_BITS)>>L1_ICACHE_TAG_REMAINING_BITS;
     cache = l1_cache;
     findPlace(L1_DCACHE, l1_dcache_entry_t, L1_DCACHE_WAYS)
@@ -435,13 +435,13 @@ int cache_write(void *mem_space,
     {    saved_index=hit_index;                                                                                                               \
         p_line[word_index] = *word;                                                                                     \
   for (size_t i = 0; i < WORDS_PER_LINE; ++i)\
-  entry_toinsert->line[i] = p_line[i];\
-  entry_toinsert->v=1;\
-  entry_toinsert->age=0;\
-entry_toinsert->tag= phaddr >> REMAINING_BITS; \
+  entry_toinsert.line[i] = p_line[i];\
+  entry_toinsert.v=1;\
+  entry_toinsert.age=0;\
+entry_toinsert.tag= phaddr >> REMAINING_BITS; \
         if(CACHE_TYPE == L2_CACHE) hit_index=saved_index;\
         else hit_index=(saved_index<<L1_ICACHE_TAG_REMAINING_BITS)>>L1_ICACHE_TAG_REMAINING_BITS;\
-        cache_insert(hit_index, hit_way, entry_toinsert, cachet, CACHE_TYPE);                                                   \
+        cache_insert(hit_index, hit_way, &entry_toinsert, cachet, CACHE_TYPE);                                                   \
         void *cache = cachet;                                                                                           \
         LRU_age_update(type, WAYS, hit_way, hit_index);                                                                 \
         off = phaddr - (phaddr % LINES);                              \
@@ -452,7 +452,7 @@ entry_toinsert->tag= phaddr >> REMAINING_BITS; \
             moveL2_to_L1(CACHE_TYPE, WAYS, REMAINING_BITS, l1_dcache_entry_t);                                                             \
         return ERR_NONE;                                                                                                \
     }
-l1_dcache_entry_t * entry_toinsert; 
+l1_dcache_entry_t entry_toinsert; 
 uint32_t off, index;
     read_mod_ins(l1_cache, L1_DCACHE, L1_DCACHE_WAYS, l1_dcache_entry_t, L1_DCACHE_WORDS_PER_LINE, L1_DCACHE_TAG_REMAINING_BITS, L1_DCACHE_LINES);
     read_mod_ins(l2_cache, L2_CACHE, L2_CACHE_WAYS, l2_cache_entry_t, L2_CACHE_WORDS_PER_LINE, L2_CACHE_TAG_REMAINING_BITS,L2_CACHE_LINES);
@@ -465,10 +465,10 @@ uint32_t off, index;
     for (size_t i = 0; i < L1_DCACHE_WORDS_PER_LINE; ++i){
         *((word_t *)mem_space + index + i) = data_entry.line[i];
 
-  entry_toinsert->line[i] = data_entry.line[i];}
-  entry_toinsert->v=1;
-  entry_toinsert->age=0;
-entry_toinsert->tag = phaddr >> L1_DCACHE_TAG_REMAINING_BITS;  
+  entry_toinsert.line[i] = data_entry.line[i];}
+  entry_toinsert.v=1;
+  entry_toinsert.age=0;
+entry_toinsert.tag = phaddr >> L1_DCACHE_TAG_REMAINING_BITS;  
     void *cache = l1_cache;
     
     findPlace(L1_DCACHE, l1_dcache_entry_t, L1_DCACHE_WAYS)

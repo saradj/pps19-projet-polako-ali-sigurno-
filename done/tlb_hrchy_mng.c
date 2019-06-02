@@ -224,7 +224,7 @@ int tlb_search(const void *mem_space,
     line_index = vpg_num % L2_TLB_LINES;
     int isValid = 0;
     uint32_t tag = 0;
-    if (l2_tlb[line_index].v == 1)// if there was an entry before in l2 
+    if (l2_tlb[line_index].v == 1) // if there was an entry before in l2
     {
         isValid = 1;
         tag = l2_tlb[line_index].tag << 2;
@@ -249,5 +249,6 @@ int tlb_search(const void *mem_space,
         if (isValid == 1 && l1_itlb[line_index].tag == tag)
             l1_itlb[line_index].v = 0; // de-validate the other l1 tlb entry at that index if it was valid and it's tag was=l2 tag
     }
+
     return ERR_NONE;
 }
