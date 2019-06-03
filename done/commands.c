@@ -17,7 +17,7 @@
 #include "addr.h"
 
 #define INIT_NBLINES 10
-#define MASK_BYTE 0b11111111
+#define BITS_IN_BYTE 8
 #define MASK_WORD ((uint32_t)-1)
 int fill_command(FILE *fp, command_t *command);
 
@@ -87,7 +87,7 @@ int program_add_command(program_t *program, const command_t *command)
 	M_EXIT_IF((command->type == DATA) && ((command->data_size != 1) && (command->data_size != sizeof(word_t))), ERR_SIZE, "data can not have length different than 1 byte or word, length is %u", command->data_size);
 	M_EXIT_IF((command->type == INSTRUCTION) && (command->data_size != sizeof(word_t)), ERR_SIZE, "Instructions must have length of a word, but size is %z", command->data_size); //should we use err size or err bad parameter??
 	M_EXIT_IF((command->type == INSTRUCTION) && (command->order != READ), ERR_BAD_PARAMETER, "cannot write only %s commands", "read");
-	M_EXIT_IF((command->order == WRITE) && (command->type == DATA) && ((command->data_size == 1) && (command->write_data >> 8 != 0)), ERR_BAD_PARAMETER, "wite data is not good size %d", command->write_data);
+	M_EXIT_IF((command->order == WRITE) && (command->type == DATA) && ((command->data_size == 1) && (command->write_data >> BITS_IN_BYTE != 0)), ERR_BAD_PARAMETER, "wite data is not good size %d", command->write_data);
 	//M_EXIT_IF((command->order == READ) && (command->write_data != 0), ERR_BAD_PARAMETER, "wite data is not good size %d", command->write_data);// gives an error !
 
 	size_t old_allocated = program->allocated; // saving the old allocated value to be able to initialise the new allocated memory part
