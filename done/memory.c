@@ -212,9 +212,21 @@ int mem_init_from_description(const char *master_filename, void **memory, size_t
 
     uint64_t vadd = 0;
     phy_addr_t paddr;
-    init_phy_addr(&paddr, 0, 0); //initializing the physical address
+     //initializing the physical address
+    if (ret = init_phy_addr(&paddr, 0, 0) != ERR_NONE)
+        {
+            fclose(file);
+            free(*memory);
+            return ret;
+        }
     virt_addr_t virtaddr;
-    init_virt_addr64(&virtaddr, 0); //initializing the virtual address
+    //initializing the virtual address
+    if (ret =  init_virt_addr64(&virtaddr, 0)!= ERR_NONE)
+        {
+            fclose(file);
+            free(*memory);
+            return ret;
+        }
     int n = 0;
     while (n = fscanf(file, "%lx" SCNx64, &vadd) != EOF)
     {
@@ -224,7 +236,13 @@ int mem_init_from_description(const char *master_filename, void **memory, size_t
             free(*memory);
             return ERR_IO;
         } //getting the virtual address and string untill the end
-        init_virt_addr64(&virtaddr, vadd);
+        
+        if (ret = init_virt_addr64(&virtaddr, vadd)!= ERR_NONE)
+        {
+            fclose(file);
+            free(*memory);
+            return ret;
+        }
         if (ret = page_walk(*memory, &virtaddr, &paddr) != ERR_NONE)
         {
             fclose(file);
