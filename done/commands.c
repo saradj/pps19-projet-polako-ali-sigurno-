@@ -99,7 +99,7 @@ int program_add_command(program_t *program, const command_t *command)
 		program->listing = listing;
 		memset(program->listing + (old_allocated / sizeof(command_t)), 0, old_allocated); // initialiing the uninitialised parts of memory
 	}
-	M_REQUIRE((program->nb_lines) < 99, ERR_MEM, "programm already contains %u commands", program->nb_lines);
+	M_REQUIRE((program->nb_lines) < 100, ERR_MEM, "programm already contains %u commands", program->nb_lines);
 	program->listing[program->nb_lines] = *command; //adding the command
 	++(program->nb_lines);
 	return ERR_NONE;
