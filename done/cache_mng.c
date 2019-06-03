@@ -268,11 +268,12 @@ int cache_hit(const void *mem_space,
     for (size_t i = 0; i < WORDS_PER_LINE; ++i) \
         lineTo[i] = lineFrom[i];
 
-#define initEntry(type, ENTRY, lineFrom, TAG) \
+#define initEntry(type, ENTRY, lineFrom, TAG, oldage) \
     ((type *)ENTRY)->v = 1;                   \
-    ((type *)ENTRY)->age = 0;                 \
+    ((type *)ENTRY)->age = oldage;                 \
     ((type *)ENTRY)->tag = TAG;               \
     initLine(((type *)ENTRY)->line, lineFrom);
+
 #define l1_search(TYPE)                                                                                                               \
     M_EXIT_IF_ERR(cache_hit(mem_space, l1_cache, paddr, &p_line, &hit_way, &hit_index, TYPE), "calling cache hit on l1 instruction"); \
     if (hit_way != HIT_WAY_MISS)                                                                                                      \
@@ -312,7 +313,7 @@ int cache_hit(const void *mem_space,
     hit_index = saved_index & MASK_LINE_INDEX_L1;                                                            \
     evict(type, WAYS, L1TYPE);                                                                               \
     cache = l2_cache;                                                                                        \
-    initEntry(l2_cache_entry_t, entry_toinsert, evicted, l1tag >> (L1_ICACHE_TAG_BITS - L2_CACHE_TAG_BITS)); \
+    initEntry(l2_cache_entry_t, entry_toinsert, evicted, l1tag >> (L1_ICACHE_TAG_BITS - L2_CACHE_TAG_BITS),0); \
     hit_index = ((l1tag & MASK_THREE_BITS) << LINE_INDEX_L1_BITS) | hit_index;                               \
     findPlace(L2_CACHE, l2_cache_entry_t, L2_CACHE_WAYS);                                                    \
     evict(l2_cache_entry_t, L2_CACHE_WAYS, L2_CACHE);                                                        \
@@ -321,7 +322,7 @@ int cache_hit(const void *mem_space,
 #define moveL2_to_L1(L1TYPE, WAYS, REMAINING_BITS, type, LINES)                                                                                                         \
     cache_valid(l2_cache_entry_t, L2_CACHE_WAYS, hit_index, hit_way) = 0;                                                                                               \
     uint32_t newtag = (cache_tag(l2_cache_entry_t, L2_CACHE_WAYS, hit_index, hit_way) << (L1_ICACHE_TAG_BITS - L2_CACHE_TAG_BITS)) | (hit_index >> LINE_INDEX_L1_BITS); \
-    initEntry(type, entry_toinsert, cache_line(l2_cache_entry_t, L2_CACHE_WAYS, hit_index, hit_way), newtag);                                                           \
+    initEntry(type, entry_toinsert, cache_line(l2_cache_entry_t, L2_CACHE_WAYS, hit_index, hit_way), newtag, 0);                                                           \
     hit_index = saved_index & MASK_LINE_INDEX_L1;                                                                                                                       \
     cache = l1_cache;                                                                                                                                                   \
     findPlace(L1TYPE, type, WAYS);                                                                                                                                      \
@@ -342,7 +343,7 @@ int cache_hit(const void *mem_space,
 
 #define miss_in_both(CACHE_TYPE, LINE, LINES, type, WAYS)                                                            \
     M_EXIT_IF_ERR(cache_entry_init(mem_space, paddr, entry_toinsert, CACHE_TYPE), "while initialising cache entry"); \
-    *word = entry_toinsert->line[word_index];                                                                        \
+  *word = entry_toinsert->line[word_index];                                                                        \
     hit_index = (phaddr / (LINE)) % LINES;                                                                           \
     saved_index = hit_index;                                                                                         \
     cache = l1_cache;                                                                                                \
@@ -363,6 +364,8 @@ int cache_read(const void *mem_space,
     M_REQUIRE_NON_NULL(l2_cache);
     M_REQUIRE_NON_NULL(paddr);
     M_REQUIRE_NON_NULL(word);
+    if(replace != LRU)
+    return ERR_BAD_PARAMETER;
     uint32_t phaddr = getPhaddr(paddr);                                                                           //get the physical address
     M_REQUIRE((phaddr % WORDS_PER_LINE) == 0, ERR_BAD_PARAMETER, "physical address %d not word aligned", phaddr); // CHECK IF LAST 2 BITS == 0
     const word_t *p_line = NULL;
@@ -418,6 +421,8 @@ int cache_read_byte(const void *mem_space,
     M_REQUIRE_NON_NULL(l2_cache);
     M_REQUIRE_NON_NULL(p_paddr);
     M_REQUIRE_NON_NULL(p_byte);
+    if(replace != LRU)
+    return ERR_BAD_PARAMETER;
     uint32_t phaddr = getPhaddr(p_paddr);
     uint8_t byteIndex = phaddr % sizeof(word_t); // gives the last 2 bits
     word_t word = 0;
@@ -439,22 +444,24 @@ int cache_write(void *mem_space,
     M_REQUIRE_NON_NULL(l2_cache);
     M_REQUIRE_NON_NULL(paddr);
     M_REQUIRE_NON_NULL(word);
+    if(replace != LRU)
+    return ERR_BAD_PARAMETER;
     uint32_t phaddr = getPhaddr(paddr);
     M_REQUIRE((phaddr % WORDS_PER_LINE) == 0, ERR_BAD_PARAMETER, "physical address %d not word aligned", phaddr);
     uint32_t *p_line = NULL;
     uint8_t hit_way = 0;
     uint16_t saved_index, hit_index = 0;
-    uint32_t word_index = (phaddr >> SEL_BYTE) & MASK_TWO_BITS;
+    uint8_t word_index = (phaddr >> SEL_BYTE) & MASK_TWO_BITS;
 #define read_mod_ins(cachet, CACHE_TYPE, WAYS, type, WORDS_PER_LINE, REMAINING_BITS, LINES)                             \
     M_EXIT_IF_ERR(cache_hit(mem_space, cachet, paddr, &p_line, &hit_way, &hit_index, CACHE_TYPE), "while calling hit"); \
     if (hit_way != HIT_WAY_MISS)                                                                                        \
     {                                                                                                                   \
         saved_index = hit_index;                                                                                        \
+         void *cache = cachet;                                                                                           \
         p_line[word_index] = *word;                                                                                     \
-        initEntry(type, entry_toinsert, p_line, phaddr >> REMAINING_BITS);                                              \
+        initEntry(type, entry_toinsert, p_line, cache_tag(type, WAYS, hit_index, hit_way),cache_age(type, WAYS, hit_index, hit_way) );                                              \
         cache_insert(hit_index, hit_way, entry_toinsert, cachet, CACHE_TYPE);                                           \
-        void *cache = cachet;                                                                                           \
-        LRU_age_update(type, WAYS, hit_way, hit_index);                                                                 \
+            LRU_age_update(type, WAYS, hit_way, hit_index);                                                                 \
         off = phaddr - (phaddr % LINES);                                                                                \
         index = off / WORDS_PER_LINE;                                                                                   \
         for (size_t i = 0; i < WORDS_PER_LINE; ++i)                                                                     \
@@ -473,7 +480,7 @@ int cache_write(void *mem_space,
     l2_cache_entry_t l2;
     entry_toinsert = &l2;
     read_mod_ins(l2_cache, L2_CACHE, L2_CACHE_WAYS, l2_cache_entry_t, L2_CACHE_WORDS_PER_LINE, L2_CACHE_TAG_REMAINING_BITS, L2_CACHE_LINES);
-    entry_toinsert = &l1d;//alrady done in red_mod_ins but just to make it clean that it points to the right type entry
+    entry_toinsert = &l1d;//alrady done in red_mod_ins but just to make it clear that it points to the right type entry
     M_EXIT_IF_ERR(cache_entry_init(mem_space, paddr, entry_toinsert, L1_DCACHE), "while calling cache entry init");
     off = phaddr - (phaddr % L1_DCACHE_LINES);
     index = off / L1_DCACHE_WORDS_PER_LINE; //recalculate the index in main memory
@@ -501,6 +508,8 @@ int cache_write_byte(void *mem_space,
     M_REQUIRE_NON_NULL(l1_cache);
     M_REQUIRE_NON_NULL(l2_cache);
     M_REQUIRE_NON_NULL(paddr);
+    if(replace != LRU)
+    return ERR_BAD_PARAMETER;
     uint32_t phaddr = getPhaddr(paddr);
     uint8_t byteIndex = phaddr % sizeof(word_t); // gives the last 2 bits
     word_t word = 0;
