@@ -149,8 +149,8 @@ void move_back(list_t *this, node_t *node)
 
 int print_list(FILE *stream, const list_t *this)
 {
-	M_REQUIRE_NON_NULL(this);
-	M_REQUIRE_NON_NULL_CUSTOM_ERR(stream, ERR_IO);
+	if(this==NULL||stream==NULL)
+	return 0;
 	list_content_t sum = 0;
 	sum += fprintf(stream, "(");
 	for_all_nodes(n, this)
@@ -165,8 +165,8 @@ int print_list(FILE *stream, const list_t *this)
 
 int print_reverse_list(FILE *stream, const list_t *this)
 {
-	M_REQUIRE_NON_NULL(this);
-	M_REQUIRE_NON_NULL_CUSTOM_ERR(stream, ERR_IO);
+	if(this==NULL||stream==NULL)
+	return 0;
 	list_content_t sum = 0;
 	sum += fprintf(stream, "("); // how to check if correct number read? assert or if <0 and do what???
 	for_all_nodes_reverse(n, this)

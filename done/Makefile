@@ -5,7 +5,7 @@
 CFLAGS = -std=c11 -Wall -Wpedantic -g
 
  #a bit more checks if you'd like to (uncomment
- CFLAGS += -Wextra -Wfloat-equal -Wshadow                         \
+ #CFLAGS += -Wextra -Wfloat-equal -Wshadow                         \
  -Wpointer-arith -Wbad-function-cast -Wcast-align -Wwrite-strings \
  -Wconversion -Wunreachable-code
 

@@ -25,7 +25,10 @@ int program_init(program_t *program)
 
 	M_REQUIRE_NON_NULL(program);
 	program->listing = (command_t *)calloc(INIT_NBLINES, sizeof(command_t)); //using callc to allocate and initialise to 0 an array of 10 commands
-	M_EXIT_IF_NULL(program->listing, INIT_NBLINES * sizeof(command_t));
+	if(program->listing==NULL){
+		program->allocated=0;
+		return ERR_MEM;
+	}
 	program->nb_lines = 0;
 	program->allocated = INIT_NBLINES * sizeof(command_t);
 	return ERR_NONE;

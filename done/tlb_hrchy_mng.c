@@ -191,25 +191,22 @@ int tlb_search(const void *mem_space,
         return ERR_NONE;                                            \
     }
 
+#define l2hit(type, tlb_type, LINES, tlbe)                                                                   \
+    line_index = vpg_num % LINES;                                                                            \
+    type ie;                                                                                                 \
+    M_EXIT_IF_ERR(tlb_entry_init(vaddr, paddr, &ie, tlb_type), "while initialising instruction tlb entry");  \
+    M_EXIT_IF_ERR(tlb_insert(line_index, &ie, tlbe, tlb_type), "while inserting the instruction tlb entry"); \
+    return ERR_NONE;
 
-    #define l2hit(type, tlb_type, LINES,tlbe)\
-     line_index = vpg_num % LINES; \
-            type ie;\
-            M_EXIT_IF_ERR(tlb_entry_init(vaddr, paddr, &ie, tlb_type), "while initialising instruction tlb entry");\
-            M_EXIT_IF_ERR(tlb_insert(line_index, &ie, tlbe, tlb_type), "while inserting the instruction tlb entry");\
-            return ERR_NONE;
+#define l2_to_l1(type, LINES, tlb_type, tlbthis, tlbother)                                                      \
+    line_index = vpg_num % LINES;                                                                               \
+    type ientry;                                                                                                \
+    M_EXIT_IF_ERR(tlb_entry_init(vaddr, paddr, &ientry, tlb_type), "while initialising tlb entry");             \
+    M_EXIT_IF_ERR(tlb_insert(line_index, &ientry, tlbthis, tlb_type);, "while inserting the tlb entry in L1 "); \
+    if (isValid == 1 && tlbother[line_index].tag == tag)                                                        \
+        tlbother[line_index].v = 0;
 
-
-    #define l2_to_l1(type, LINES, tlb_type, tlbthis, tlbother)\
-      line_index = vpg_num % LINES;\
-        type ientry;\
-        M_EXIT_IF_ERR(tlb_entry_init(vaddr, paddr, &ientry, tlb_type), "while initialising tlb entry");\
-        M_EXIT_IF_ERR(tlb_insert(line_index, &ientry, tlbthis, tlb_type);, "while inserting the tlb entry in L1 ");\
-        if (isValid == 1 && tlbother[line_index].tag == tag)\
-            tlbother[line_index].v = 0; 
-
-
-    l1hit(INSTRUCTION, l1_itlb, L1_ITLB);//checking if hit in level 1 tlb
+    l1hit(INSTRUCTION, l1_itlb, L1_ITLB); //checking if hit in level 1 tlb
     l1hit(DATA, l1_dtlb, L1_DTLB);
     uint64_t vpg_num = virt_addr_t_to_virtual_page_number(vaddr);
     list_content_t line_index = 0;
@@ -217,12 +214,14 @@ int tlb_search(const void *mem_space,
     {
         *hit_or_miss = 1; // hit in l2, but must recopy the information in the corresponding l1 tlb
 
-        if (access == INSTRUCTION)// getting the corresponding line index for l1 instruction AND putting the informationin l1 instruction tbl
+        if (access == INSTRUCTION) // getting the corresponding line index for l1 instruction AND putting the informationin l1 instruction tbl
         {
-           l2hit(l1_itlb_entry_t,L1_ITLB, L1_ITLB_LINES, l1_itlb);    }
+            l2hit(l1_itlb_entry_t, L1_ITLB, L1_ITLB_LINES, l1_itlb);
+        }
         else
         {
-           l2hit(l1_dtlb_entry_t,L1_DTLB, L1_DTLB_LINES, l1_dtlb);        }
+            l2hit(l1_dtlb_entry_t, L1_DTLB, L1_DTLB_LINES, l1_dtlb);
+        }
     }
     *hit_or_miss = 0; // if it's not in l1 or l2
 
@@ -236,15 +235,17 @@ int tlb_search(const void *mem_space,
     {
         isValid = 1;
         tag = l2_tlb[line_index].tag << OFF;
-        tag = tag | (line_index >> LINE_OFF);                                                                     // 32 bit tag = (30 bit tag from l2 & 2 first bits of line index of l2)
+        tag = tag | (line_index >> LINE_OFF);                                                              // 32 bit tag = (30 bit tag from l2 & 2 first bits of line index of l2)
     }                                                                                                      // getting the right index in l2
     M_EXIT_IF_ERR(tlb_insert(line_index, &entry, l2_tlb, L2_TLB);, "while inserting the tlb entry in L2"); // insert it
-    if (access == INSTRUCTION) // inserting the data in the tlb l1 according to the access and de-validate the other l1 tlb entry at that index if it was valid and it's tag was=l2 tag
+    if (access == INSTRUCTION)                                                                             // inserting the data in the tlb l1 according to the access and de-validate the other l1 tlb entry at that index if it was valid and it's tag was=l2 tag
     {
-       l2_to_l1(l1_itlb_entry_t, L1_ITLB_LINES, L1_ITLB, l1_itlb, l1_dtlb) ;   }
+        l2_to_l1(l1_itlb_entry_t, L1_ITLB_LINES, L1_ITLB, l1_itlb, l1_dtlb);
+    }
     else
     {
-      l2_to_l1(l1_dtlb_entry_t, L1_DTLB_LINES, L1_DTLB, l1_dtlb, l1_itlb) ;      }
+        l2_to_l1(l1_dtlb_entry_t, L1_DTLB_LINES, L1_DTLB, l1_dtlb, l1_itlb);
+    }
 
     return ERR_NONE;
 }

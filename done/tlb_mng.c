@@ -32,7 +32,7 @@ int tlb_flush(tlb_entry_t *tlb)
 	M_REQUIRE_NON_NULL(tlb);
 	for (list_content_t i = 0; i < TLB_LINES; i++) //initializing all of the entries in the tlb to 0
 	{
-		zero_init_var(tlb[i]);
+		memset(&tlb[i],0, sizeof(tlb[i]));
 	}
 	return ERR_NONE;
 }
@@ -43,7 +43,7 @@ int tlb_insert(uint32_t line_index,
 {
 	M_REQUIRE_NON_NULL(tlb);
 	M_REQUIRE_NON_NULL(tlb_entry);
-	M_REQUIRE(line_index < TLB_LINES, ERR_SIZE, "line index is greater that max number of lines line_index = %u", line_index);
+	M_REQUIRE(line_index < TLB_LINES, ERR_BAD_PARAMETER, "line index is greater that max number of lines line_index = %u", line_index);
 	tlb[line_index] = *tlb_entry; // after verification inserting the given entry at the given index in the tlb passed as an argument
 	return ERR_NONE;
 }
