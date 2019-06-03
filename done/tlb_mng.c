@@ -32,7 +32,7 @@ int tlb_flush(tlb_entry_t *tlb)
 	M_REQUIRE_NON_NULL(tlb);
 	for (list_content_t i = 0; i < TLB_LINES; i++) //initializing all of the entries in the tlb to 0
 	{
-		memset(&tlb[i],0, sizeof(tlb[i]));
+		memset(&tlb[i], 0, sizeof(tlb[i]));
 	}
 	return ERR_NONE;
 }
