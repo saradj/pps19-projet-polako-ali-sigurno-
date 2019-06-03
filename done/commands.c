@@ -6,8 +6,8 @@
  * @date March 2019
  */
 #include "commands.h" //
-#include <stdio.h>		// for size_t, FILE
-#include <stdint.h>		// for uint32_t
+#include <stdio.h>	// for size_t, FILE
+#include <stdint.h>   // for uint32_t
 #include <string.h>
 #include <ctype.h>
 #include <inttypes.h>
@@ -17,7 +17,8 @@
 #include "addr.h"
 
 #define INIT_NBLINES 10
-
+#define MASK_BYTE 0b11111111
+#define MASK_WORD ((uint32_t)-1)
 int fill_command(FILE *fp, command_t *command);
 
 int program_init(program_t *program)
@@ -25,8 +26,9 @@ int program_init(program_t *program)
 
 	M_REQUIRE_NON_NULL(program);
 	program->listing = (command_t *)calloc(INIT_NBLINES, sizeof(command_t)); //using callc to allocate and initialise to 0 an array of 10 commands
-	if(program->listing==NULL){
-		program->allocated=0;
+	if (program->listing == NULL)
+	{
+		program->allocated = 0;
 		return ERR_MEM;
 	}
 	program->nb_lines = 0;
@@ -41,7 +43,7 @@ int program_print(FILE *output, const program_t *program)
 	M_REQUIRE_NON_NULL(program->listing);
 	M_REQUIRE_NON_NULL(output);
 	for_all_lines(line, program)
-	{																												// looping trough the lines
+	{														  // looping trough the lines
 		fprintf(output, (line->order == READ) ? "R " : "W "); //check for a read
 		fprintf(output, (line->type == INSTRUCTION) ? "I " : (line->data_size == 1) ? "DB " : "DW ");
 		if (line->order == WRITE)
@@ -64,9 +66,14 @@ int program_shrink(program_t *program)
 
 	M_REQUIRE_NON_NULL(program);
 	M_REQUIRE_NON_NULL(program->listing);
-	program->allocated = program->nb_lines == 0 ? INIT_NBLINES : program->nb_lines;	 // allocating only a needed number of lines
-	command_t* listing=NULL;
-	M_EXIT_IF_NULL(listing = (command_t *)realloc(program->listing, program->allocated * sizeof(command_t)), program->allocated* sizeof(command_t));
+	size_t old_allocated = program->allocated;										// saving the old allocated value
+	program->allocated = program->nb_lines == 0 ? INIT_NBLINES : program->nb_lines; // allocating only a needed number of lines
+	command_t *listing = NULL;
+	if ((listing = (command_t *)realloc(program->listing, program->allocated * sizeof(command_t)), program->allocated * sizeof(command_t)) == NULL)
+	{
+		program->allocated = old_allocated;
+		return ERR_MEM; // IF REALLOC FAILS
+	}
 	program->listing = listing;
 	return ERR_NONE;
 }
@@ -77,20 +84,22 @@ int program_add_command(program_t *program, const command_t *command)
 	M_REQUIRE_NON_NULL(command);
 	M_REQUIRE_NON_NULL(program->listing);
 
-
 	M_EXIT_IF((command->type == DATA) && ((command->data_size != 1) && (command->data_size != sizeof(word_t))), ERR_SIZE, "data can not have length different than 1 byte or word, length is %u", command->data_size);
-		M_EXIT_IF((command->type == INSTRUCTION) && (command->data_size!= sizeof(word_t)), ERR_SIZE, "Instructions must have length of a word, but size is %z", command->data_size);//should we use err size or err bad parameter??
-		M_EXIT_IF((command->type == INSTRUCTION) &&(command->order != READ), ERR_BAD_PARAMETER, "cannot write only %s commands", "read");
+	M_EXIT_IF((command->type == INSTRUCTION) && (command->data_size != sizeof(word_t)), ERR_SIZE, "Instructions must have length of a word, but size is %z", command->data_size); //should we use err size or err bad parameter??
+	M_EXIT_IF((command->type == INSTRUCTION) && (command->order != READ), ERR_BAD_PARAMETER, "cannot write only %s commands", "read");
+	M_EXIT_IF((command->order == WRITE) && (command->type == DATA) && ((command->data_size == 1) && (command->write_data >> 8 != 0)), ERR_BAD_PARAMETER, "wite data is not good size %d", command->write_data);
+	//M_EXIT_IF((command->order == READ) && (command->write_data != 0), ERR_BAD_PARAMETER, "wite data is not good size %d", command->write_data);// gives an error !
+
 	size_t old_allocated = program->allocated; // saving the old allocated value to be able to initialise the new allocated memory part
 	if (program->nb_lines * sizeof(command_t) >= program->allocated)
 	{
 		program->allocated = program->allocated * 2; // doubling  the allocated size
-			command_t* listing=NULL;
+		command_t *listing = NULL;
 		M_EXIT_IF_NULL(listing = (command_t *)realloc(program->listing, program->allocated), program->allocated);
 		program->listing = listing;
 		memset(program->listing + (old_allocated / sizeof(command_t)), 0, old_allocated); // initialiing the uninitialised parts of memory
 	}
-	M_REQUIRE((program->nb_lines) < 100, ERR_MEM, "programm already contains %u commands", program->nb_lines);
+	M_REQUIRE((program->nb_lines) < 99, ERR_MEM, "programm already contains %u commands", program->nb_lines);
 	program->listing[program->nb_lines] = *command; //adding the command
 	++(program->nb_lines);
 	return ERR_NONE;
@@ -127,7 +136,7 @@ int program_read(const char *filename, program_t *program)
 
 int fill_command(FILE *fp, command_t *command)
 {
-	int n=0;
+	int n = 0;
 	char c;
 	while (isspace(c = fgetc(fp)))
 	{
@@ -168,7 +177,7 @@ int fill_command(FILE *fp, command_t *command)
 		if (command->order == WRITE)
 		{
 			uint32_t writeData;
-				M_REQUIRE(n=fscanf(fp, "%x" SCNx32, &writeData)==1,ERR_BAD_PARAMETER, "number of 32 bits read is %d", n); // getting the write data
+			M_REQUIRE(n = fscanf(fp, "%x" SCNx32, &writeData) == 1, ERR_BAD_PARAMETER, "number of 32 bits read is %d", n); // getting the write data
 			command->write_data = writeData;
 		}
 		M_REQUIRE(isspace(c = fgetc(fp)), ERR_BAD_PARAMETER, "WRITEDATA must be followed by space but is followed by %c", c);
@@ -185,7 +194,7 @@ int fill_command(FILE *fp, command_t *command)
 	M_REQUIRE(c == '@', ERR_ADDR, "virtadd  must start with @, first character is %c", c);
 	uint64_t vaddr = 0;
 
-	M_REQUIRE(n=fscanf(fp, "%lx" SCNx64, &vaddr)==1,ERR_BAD_PARAMETER, "number of 64 bits read is %d", n);
+	M_REQUIRE(n = fscanf(fp, "%lx" SCNx64, &vaddr) == 1, ERR_BAD_PARAMETER, "number of 64 bits read is %d", n);
 
 	return init_virt_addr64(&(command->vaddr), vaddr); // initialising the virtual address of the command
 }

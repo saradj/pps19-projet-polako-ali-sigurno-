@@ -423,7 +423,7 @@ int cache_read_byte(const void *mem_space,
     word_t word = 0;
     p_paddr->page_offset -= (p_paddr->page_offset % WORDS_PER_LINE); //making the physica address word aligned
     M_EXIT_IF_ERR(cache_read(mem_space, p_paddr, access, l1_cache, l2_cache, &word, replace), "calling cache read");
-    *p_byte = (word >> ((sizeof(word_t) - 1 - byteIndex) * BITS_IN_BYTE))& BYTE_MASK; //little endian, leftmost byte in word is index 0
+    *p_byte = (word >> ( byteIndex) * BITS_IN_BYTE)& BYTE_MASK; //little endian, lsb byte in word is index 0
     return ERR_NONE;
 }
 
@@ -506,9 +506,9 @@ int cache_write_byte(void *mem_space,
     word_t word = 0;
    paddr->page_offset -= (paddr->page_offset % WORDS_PER_LINE); //making the physica address word aligned
     M_EXIT_IF_ERR(cache_read(mem_space, paddr, DATA, l1_cache, l2_cache, &word, replace), "CALLING read");
-    uint32_t mask = (BYTE_MASK << ((sizeof(word_t) - 1 - byteIndex) * BITS_IN_BYTE)); //little endian so must recalculate byte index= 3-byteindex
+    uint32_t mask = (BYTE_MASK << ( byteIndex * BITS_IN_BYTE)); //little endian 
     mask = ~mask;
-    uint32_t modified = p_byte << ((sizeof(word_t) - 1 - byteIndex) * BITS_IN_BYTE);
+    uint32_t modified = p_byte << (byteIndex * BITS_IN_BYTE);
     word = (word & mask) | modified;
     M_EXIT_IF_ERR(cache_write(mem_space, paddr, l1_cache, l2_cache, &word, replace), "CALLING WRITE");
     return ERR_NONE;

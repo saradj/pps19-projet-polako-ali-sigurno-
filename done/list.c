@@ -12,8 +12,17 @@
 
 int is_empty_list(const list_t *this)
 {
-	M_REQUIRE_NON_NULL(this);
-	return (this->front == this->back && this->back == NULL);
+	if (this == NULL) // not well formed
+		return 1;
+	if (this->back == NULL)
+	{
+		if (this->front == NULL)
+			return 1; // empty list
+		return 1;	 // not well formed front not null and back null
+	}
+	else if (this->front == NULL)
+		return 1; // not well formed front null back not null
+	return 0;	 // well formed both front and back are non null
 }
 
 void init_list(list_t *this) // initialising the list to the empty list
@@ -149,8 +158,8 @@ void move_back(list_t *this, node_t *node)
 
 int print_list(FILE *stream, const list_t *this)
 {
-	if(this==NULL||stream==NULL)
-	return 0;
+	if (this == NULL || stream == NULL)
+		return 0;
 	list_content_t sum = 0;
 	sum += fprintf(stream, "(");
 	for_all_nodes(n, this)
@@ -165,8 +174,8 @@ int print_list(FILE *stream, const list_t *this)
 
 int print_reverse_list(FILE *stream, const list_t *this)
 {
-	if(this==NULL||stream==NULL)
-	return 0;
+	if (this == NULL || stream == NULL)
+		return 0;
 	list_content_t sum = 0;
 	sum += fprintf(stream, "("); // how to check if correct number read? assert or if <0 and do what???
 	for_all_nodes_reverse(n, this)

@@ -29,7 +29,7 @@ int init_virt_addr(virt_addr_t *vaddr,
   //respective bitfields into virtual address vaddr
   
   M_REQUIRE_NON_NULL(vaddr);
-  M_REQUIRE(page_offset <= MASK_OFFSET, ERR_BAD_PARAMETER, "Input value  should be 12 bits bu is %lu bits", page_offset);
+  M_REQUIRE(page_offset < PAGE_SIZE, ERR_BAD_PARAMETER, "Input value  should be 12 bits bu is %lu bits", page_offset);
   M_REQUIRE(pte_entry <= MASK_ENTRY, ERR_BAD_PARAMETER, "Input value  should be 9 bits bu is %lu bits", pte_entry);
   M_REQUIRE(pmd_entry <= MASK_ENTRY, ERR_BAD_PARAMETER, "Input value  should be 9 bits bu is %lu bits", pmd_entry);
   M_REQUIRE(pud_entry <= MASK_ENTRY, ERR_BAD_PARAMETER, "Input value  should be 9 bits bu is %lu bits", pud_entry);
@@ -94,6 +94,8 @@ int print_physical_address(FILE *where, const phy_addr_t *paddr)
 int init_phy_addr(phy_addr_t *paddr, uint32_t page_begin, uint32_t page_offset)
 {
   M_REQUIRE_NON_NULL(paddr);
+   M_REQUIRE(page_offset < PAGE_SIZE, ERR_BAD_PARAMETER, "Input value  should be 12 bits bu is %lu bits", page_offset);
+    M_REQUIRE(page_begin%PAGE_SIZE==0, ERR_BAD_PARAMETER, "PAGE BEGIN should be allingned with PAGE SIZE but is %lu ", page_offset);
   paddr->phy_page_num = (page_begin) >> PAGE_OFFSET;
   paddr->page_offset = page_offset;
   return ERR_NONE;
